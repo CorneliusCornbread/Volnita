@@ -1,4 +1,4 @@
-pub struct Repo {
+pub struct SavedRepo {
     path: String,
     repo_username: String
 }
