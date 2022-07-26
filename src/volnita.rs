@@ -1,7 +1,6 @@
 use std::io;
 
 use git2::Repository;
-use super::command::git_command;
 
 pub fn start() {
     println!("Input path to repo");
@@ -11,7 +10,6 @@ pub fn start() {
 
     let len = path.trim_end_matches(&['\r', '\n'][..]).len();
     path.truncate(len);
-
     drop(len);
 
     let repo = match Repository::open(path) {
@@ -30,8 +28,10 @@ pub fn start() {
 
     let len = branch_name.trim_end_matches(&['\r', '\n'][..]).len();
     branch_name.truncate(len);
+    drop(len);
 
-    let remote = repo.find_remote("origin").unwrap();
+    let mut remote = repo.find_remote("origin").unwrap();
+    remote.connect(git2::Direction::Fetch).unwrap();
 
-    //println!("{}", remote.default_branch().unwrap().as_str().unwrap());
+    println!("{}", remote.default_branch().unwrap().as_str().unwrap());
 }
