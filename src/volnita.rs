@@ -1,5 +1,7 @@
 use git2::Repository;
 
+use crate::commit_table::CommitTable;
+
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
@@ -22,7 +24,7 @@ pub fn start() -> Result<(), Box<dyn Error>> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let app = App::new();
+    let app = CommitTable::new();
     let res = run_app(&mut terminal, app);
 
     disable_raw_mode();
@@ -40,7 +42,7 @@ pub fn start() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
+fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: CommitTable) -> io::Result<()> {
     loop {
         terminal.draw(|f| ui(f, &mut app))?;
 
@@ -55,7 +57,7 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<(
     }
 }
 
-fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
+fn ui<B: Backend>(f: &mut Frame<B>, commit_table: &mut CommitTable) {
     let rects = Layout::default()
         .constraints([Constraint::Percentage(100)].as_ref())
         .margin(5)
@@ -70,7 +72,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
         .style(normal_style)
         .height(1)
         .bottom_margin(1);
-    let rows = app.items.iter().map(|item| {
+    let rows = commit_table.table_items.iter().map(|item| {
         let height = item
             .iter()
             .map(|content| content.chars().filter(|c| *c == '\n').count())
@@ -90,68 +92,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
             Constraint::Length(30),
             Constraint::Min(10),
         ]);
-    f.render_stateful_widget(t, rects[0], &mut app.state);
-}
-
-struct App<'a> {
-    state: TableState,
-    items: Vec<Vec<&'a str>>
-}
-
-impl<'a> App<'a> {
-    fn new() -> App<'a> {
-        App {
-            state: TableState::default(),
-            items: vec![
-                vec!["Row11", "Row12", "Row13"],
-                vec!["Row21", "Row22", "Row23"],
-                vec!["Row31", "Row32", "Row33"],
-                vec!["Row41", "Row42", "Row43"],
-                vec!["Row51", "Row52", "Row53"],
-                vec!["Row61", "Row62\nTest", "Row63"],
-                vec!["Row71", "Row72", "Row73"],
-                vec!["Row81", "Row82", "Row83"],
-                vec!["Row91", "Row92", "Row93"],
-                vec!["Row101", "Row102", "Row103"],
-                vec!["Row111", "Row112", "Row113"],
-                vec!["Row121", "Row122", "Row123"],
-                vec!["Row131", "Row132", "Row133"],
-                vec!["Row141", "Row142", "Row143"],
-                vec!["Row151", "Row152", "Row153"],
-                vec!["Row161", "Row162", "Row163"],
-                vec!["Row171", "Row172", "Row173"],
-                vec!["Row181", "Row182", "Row183"],
-                vec!["Row191", "Row192", "Row193"],
-            ],
-        }
-    }
-    pub fn next(&mut self) {
-        let i = match self.state.selected() {
-            Some(i) => {
-                if i >= self.items.len() - 1 {
-                    0
-                } else {
-                    i + 1
-                }
-            }
-            None => 0,
-        };
-        self.state.select(Some(i));
-    }
-
-    pub fn previous(&mut self) {
-        let i = match self.state.selected() {
-            Some(i) => {
-                if i == 0 {
-                    self.items.len() - 1
-                } else {
-                    i - 1
-                }
-            }
-            None => 0,
-        };
-        self.state.select(Some(i));
-    }
+    f.render_stateful_widget(t, rects[0], &mut commit_table.table_state);
 }
 
 fn lib_git_run() {
