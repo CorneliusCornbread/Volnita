@@ -1,6 +1,6 @@
 use git2::Repository;
 
-use crate::commit_table::CommitTable;
+use crate::{commit_table::CommitTable, traits::display_view::DisplayView, views::opened_repo_view::OpenedRepoView};
 
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
@@ -9,11 +9,7 @@ use crossterm::{
 };
 use std::{error::Error, io};
 use tui::{
-    backend::{Backend, CrosstermBackend},
-    layout::{Constraint, Layout},
-    style::{Color, Modifier, Style},
-    widgets::{Block, Borders, Cell, Row, Table, TableState},
-    Frame, Terminal,
+    backend::{Backend, CrosstermBackend}, Terminal,
 };
 
 pub fn start() -> Result<(), Box<dyn Error>> {
@@ -24,10 +20,10 @@ pub fn start() -> Result<(), Box<dyn Error>> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let app = CommitTable::new();
-    let res = run_app(&mut terminal, app);
+    let app = OpenedRepoView::new();
+    let res = run_app(&mut terminal, app.repo_commits);
 
-    disable_raw_mode();
+    disable_raw_mode()?;
     execute!(
         terminal.backend_mut(),
         LeaveAlternateScreen,
@@ -42,57 +38,19 @@ pub fn start() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: CommitTable) -> io::Result<()> {
+fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut commit_table: CommitTable) -> io::Result<()> {
     loop {
-        terminal.draw(|f| ui(f, &mut app))?;
+        terminal.draw(|f| commit_table.display_view(f))?;
 
         if let Event::Key(key) = event::read()? {
             match key.code {
                 KeyCode::Char('q') => return Ok(()),
-                KeyCode::Down => app.next(),
-                KeyCode::Up => app.previous(),
+                KeyCode::Down => commit_table.next(),
+                KeyCode::Up => commit_table.previous(),
                 _ => {}
             }
         }
     }
-}
-
-fn ui<B: Backend>(f: &mut Frame<B>, commit_table: &mut CommitTable) {
-    let rects = Layout::default()
-        .constraints([Constraint::Percentage(100)].as_ref())
-        .margin(5)
-        .split(f.size());
-
-    let selected_style = Style::default().add_modifier(Modifier::REVERSED);
-    let normal_style = Style::default().bg(Color::Blue);
-    let header_cells = ["Header1", "Header2", "Header3"]
-        .iter()
-        .map(|h| Cell::from(*h).style(Style::default().fg(Color::Red)));
-    let header = Row::new(header_cells)
-        .style(normal_style)
-        .height(1)
-        .bottom_margin(1);
-    let rows = commit_table.table_items.iter().map(|item| {
-        let height = item
-            .iter()
-            .map(|content| content.chars().filter(|c| *c == '\n').count())
-            .max()
-            .unwrap_or(0)
-            + 1;
-        let cells = item.iter().map(|c| Cell::from(*c));
-        Row::new(cells).height(height as u16).bottom_margin(1)
-    });
-    let t = Table::new(rows)
-        .header(header)
-        .block(Block::default().borders(Borders::ALL).title("Table"))
-        .highlight_style(selected_style)
-        .highlight_symbol(">> ")
-        .widths(&[
-            Constraint::Percentage(50),
-            Constraint::Length(30),
-            Constraint::Min(10),
-        ]);
-    f.render_stateful_widget(t, rects[0], &mut commit_table.table_state);
 }
 
 fn lib_git_run() {
