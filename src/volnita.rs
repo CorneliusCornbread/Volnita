@@ -1,6 +1,6 @@
 use git2::Repository;
 
-use crate::{commit_table::CommitTable, traits::display_view::DisplayView, views::opened_repo_view::OpenedRepoView};
+use crate::{traits::display_view::DisplayView, views::opened_repo_view::OpenedRepoView};
 
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
@@ -20,8 +20,8 @@ pub fn start() -> Result<(), Box<dyn Error>> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let app = OpenedRepoView::new();
-    let res = run_app(&mut terminal, app.repo_commits);
+    let view = OpenedRepoView::new();
+    let res = run_app(&mut terminal, view);
 
     disable_raw_mode()?;
     execute!(
@@ -38,15 +38,15 @@ pub fn start() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut commit_table: CommitTable) -> io::Result<()> {
+fn run_app<B: Backend, D: DisplayView>(terminal: &mut Terminal<B>, mut view: D) -> io::Result<()> {
     loop {
-        terminal.draw(|f| commit_table.display_view(f))?;
+        terminal.draw(|f| view.display_view(f))?;
 
         if let Event::Key(key) = event::read()? {
             match key.code {
                 KeyCode::Char('q') => return Ok(()),
-                KeyCode::Down => commit_table.next(),
-                KeyCode::Up => commit_table.previous(),
+                KeyCode::Down => view.arrow_down(),
+                KeyCode::Up => view.arrow_up(),
                 _ => {}
             }
         }
