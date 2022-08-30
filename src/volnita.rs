@@ -13,6 +13,8 @@ use tui::{
 };
 
 pub fn start() -> Result<(), Box<dyn Error>> {
+    lib_git_run();
+
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
@@ -72,6 +74,17 @@ fn lib_git_run() {
     let name = head.name().unwrap();
     println!("{}", name);
 
+    let commit = head.peel_to_commit().unwrap();
+    println!("{}", commit.message().unwrap());
+    println!("{}", commit.parent(0).unwrap().message().unwrap());
+
+    let cfg = repo.config().unwrap();
+    let mut entries = cfg.entries(None).unwrap();
+    while let Some(entry) = entries.next() {
+        //let entry = entry.unwrap();
+        //println!("{} => {}", entry.name().unwrap(), entry.value().unwrap());
+    }
+
     println!("Input name of branch");
     
     let mut branch_name = String::new();
@@ -85,4 +98,5 @@ fn lib_git_run() {
     remote.connect(git2::Direction::Fetch).unwrap();
 
     println!("{}", remote.default_branch().unwrap().as_str().unwrap());
+    println!("{}", remote.name().unwrap());
 }
