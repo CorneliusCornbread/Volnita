@@ -13,8 +13,6 @@ use tui::{
 };
 
 pub fn start() -> Result<(), Box<dyn Error>> {
-    lib_git_run();
-
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
@@ -22,7 +20,8 @@ pub fn start() -> Result<(), Box<dyn Error>> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let view = OpenedRepoView::new();
+    let mut view = OpenedRepoView::new();
+    view.repo_commits.table_items = lib_git_run(&mut terminal);
     let res = run_app(&mut terminal, view);
 
     disable_raw_mode()?;
@@ -55,11 +54,11 @@ fn run_app<B: Backend, D: DisplayView>(terminal: &mut Terminal<B>, mut view: D) 
     }
 }
 
-fn lib_git_run() {
-    println!("Input path to repo");
+fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>) -> Vec<Vec<String>> {
+    println!("Input path to repo"); //TODO: Do this through TUI
 
     let mut path = String::new();
-    io::stdin().read_line(&mut path).expect("failed to readline");
+    //io::stdin().read_line(&mut path).expect("failed to readline"); //Can't do this, this breaks with TUI
 
     let len = path.trim_end_matches(&['\r', '\n'][..]).len();
     path.truncate(len);
@@ -76,7 +75,25 @@ fn lib_git_run() {
 
     let commit = head.peel_to_commit().unwrap();
     println!("{}", commit.message().unwrap());
-    println!("{}", commit.parent(0).unwrap().message().unwrap());
+    println!("parents: {}", commit.parent_count());
+    
+    let mut commit_history = Vec::new();
+
+    for i in 1..=commit.parent_count() {
+        let cur_commit = commit.parent(i).unwrap();
+
+        let commit_item = vec![
+            cur_commit.message().unwrap().to_owned(),
+            cur_commit.id().to_string(),
+            cur_commit.author().name().unwrap().to_owned(),
+        ];
+
+        commit_history.push(commit_item);
+    }
+
+    for commit_item in commit.parents() {
+        println!("{}", commit_item.message().unwrap());
+    }
 
     let cfg = repo.config().unwrap();
     let mut entries = cfg.entries(None).unwrap();
@@ -99,4 +116,6 @@ fn lib_git_run() {
 
     println!("{}", remote.default_branch().unwrap().as_str().unwrap());
     println!("{}", remote.name().unwrap());
+
+    commit_history
 }

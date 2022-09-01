@@ -4,16 +4,16 @@ use tui::{widgets::{TableState, Row, Table, Borders, Block, Cell}, style::{Style
 
 use crate::{traits::display_view::{DisplayView}};
 
-pub struct OpenedRepoView<'a> {
-    pub repo_commits: CommitTable<'a>
+pub struct OpenedRepoView {
+    pub repo_commits: CommitTable
 }
 
-impl<'a> OpenedRepoView<'a> {
-    pub fn new() -> OpenedRepoView<'a> {
+impl<'a> OpenedRepoView {
+    pub fn new() -> OpenedRepoView {
         let mut table = CommitTable {
             table_state: TableState::default(),
             table_items: vec![
-                vec!["Row11", "Row12", "Row13"],
+                /*vec!["Row11", "Row12", "Row13"],
                 vec!["Row21", "Row22", "Row23"],
                 vec!["Row31", "Row32", "Row33"],
                 vec!["Row41", "Row42", "Row43"],
@@ -31,7 +31,7 @@ impl<'a> OpenedRepoView<'a> {
                 vec!["Row161", "Row162", "Row163"],
                 vec!["Row171", "Row172", "Row173"],
                 vec!["Row181", "Row182", "Row183"],
-                vec!["Row191", "Row192", "Row193"],
+                vec!["Row191", "Row192", "Row193"],*/
             ],
         };
 
@@ -40,7 +40,7 @@ impl<'a> OpenedRepoView<'a> {
     }
 }
 
-impl DisplayView for OpenedRepoView<'_> {
+impl DisplayView for OpenedRepoView {
     fn display_view<B: tui::backend::Backend>(&mut self, f: &mut tui::Frame<B>) {
         let rects = Layout::default()
         .constraints([Constraint::Percentage(100)].as_ref())
@@ -63,7 +63,7 @@ impl DisplayView for OpenedRepoView<'_> {
                 .max()
                 .unwrap_or(0)
                 + 1;
-            let cells = item.iter().map(|c| Cell::from(*c));
+            let cells = item.iter().map(|c| Cell::from(c.to_owned()));
             Row::new(cells).height(height as u16).bottom_margin(1)
         });
         let t = Table::new(rows)
