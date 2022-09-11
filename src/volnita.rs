@@ -9,7 +9,8 @@ use crossterm::{
 };
 use std::{error::Error, io};
 use tui::{
-    backend::{Backend, CrosstermBackend}, Terminal,
+    backend::{Backend, CrosstermBackend},
+    Terminal,
 };
 
 pub fn start() -> Result<(), Box<dyn Error>> {
@@ -50,6 +51,31 @@ fn run_app<B: Backend, D: DisplayView>(terminal: &mut Terminal<B>, mut view: D) 
                 KeyCode::Up => view.arrow_up(),
                 _ => {}
             }
+
+            match app.input_mode {
+                InputMode::Normal => match key.code {
+                    KeyCode::Char('e') => {
+                        app.input_mode = InputMode::Editing;
+                    }
+                    KeyCode::Char('q') => {
+                        return Ok(());
+                    }
+                    _ => {}
+                },
+                InputMode::Editing => match key.code {
+                    KeyCode::Enter => {
+                        app.messages.push(app.input.value().into());
+                        app.input.reset();
+                    }
+                    KeyCode::Esc => {
+                        app.input_mode = InputMode::Normal;
+                    }
+                    _ => {
+                        input_backend::to_input_request(Event::Key(key))
+                            .and_then(|req| app.input.handle(req));
+                    }
+                },
+            }
         }
     }
 }
@@ -58,6 +84,7 @@ fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>) -> Vec<Vec<String>> {
     println!("Input path to repo"); //TODO: Do this through TUI
 
     let mut path = String::new();
+
     //io::stdin().read_line(&mut path).expect("failed to readline"); //Can't do this, this breaks with TUI
 
     let len = path.trim_end_matches(&['\r', '\n'][..]).len();
@@ -76,7 +103,7 @@ fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>) -> Vec<Vec<String>> {
     let commit = head.peel_to_commit().unwrap();
     println!("{}", commit.message().unwrap());
     println!("parents: {}", commit.parent_count());
-    
+
     let mut commit_history = Vec::new();
 
     for i in 1..=commit.parent_count() {
@@ -103,9 +130,11 @@ fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>) -> Vec<Vec<String>> {
     }
 
     println!("Input name of branch");
-    
+
     let mut branch_name = String::new();
-    io::stdin().read_line(&mut branch_name).expect("failed to readline");
+    io::stdin()
+        .read_line(&mut branch_name)
+        .expect("failed to readline");
 
     let len = branch_name.trim_end_matches(&['\r', '\n'][..]).len();
     branch_name.truncate(len);
