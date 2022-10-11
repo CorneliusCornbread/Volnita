@@ -13,6 +13,8 @@ use tui::{
     Terminal,
 };
 
+use crate::input_mode::InputMode;
+
 pub fn start() -> Result<(), Box<dyn Error>> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -52,10 +54,12 @@ fn run_app<B: Backend, D: DisplayView>(terminal: &mut Terminal<B>, mut view: D) 
                 _ => {}
             }
 
-            match app.input_mode {
+            let app_input_mode = view.get_input_mode();
+
+            match app_input_mode {
                 InputMode::Normal => match key.code {
                     KeyCode::Char('e') => {
-                        app.input_mode = InputMode::Editing;
+                        view.set_input_mode(InputMode::Editing);
                     }
                     KeyCode::Char('q') => {
                         return Ok(());

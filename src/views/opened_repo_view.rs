@@ -1,11 +1,19 @@
-use crate::commit_table::CommitTable;
+use crate::{
+    commit_table::CommitTable,
+    input_mode::InputMode
+};
 
-use tui::{widgets::{TableState, Row, Table, Borders, Block, Cell}, style::{Style, Modifier, Color}, layout::{Constraint, Layout}};
+use tui::{
+    layout::{Constraint, Layout},
+    style::{Color, Modifier, Style},
+    widgets::{Block, Borders, Cell, Row, Table, TableState},
+};
 
-use crate::{traits::display_view::{DisplayView}};
+use crate::traits::display_view::DisplayView;
 
 pub struct OpenedRepoView {
-    pub repo_commits: CommitTable
+    pub repo_commits: CommitTable,
+    pub input_mode: InputMode,
 }
 
 impl<'a> OpenedRepoView {
@@ -36,16 +44,19 @@ impl<'a> OpenedRepoView {
         };
 
         table.table_state.select(Some(0));
-        OpenedRepoView { repo_commits: table }
+        OpenedRepoView {
+            repo_commits: table,
+            input_mode: InputMode::Normal,
+        }
     }
 }
 
 impl DisplayView for OpenedRepoView {
     fn display_view<B: tui::backend::Backend>(&mut self, f: &mut tui::Frame<B>) {
         let rects = Layout::default()
-        .constraints([Constraint::Percentage(100)].as_ref())
-        .margin(1)
-        .split(f.size());
+            .constraints([Constraint::Percentage(100)].as_ref())
+            .margin(1)
+            .split(f.size());
 
         let selected_style = Style::default().add_modifier(Modifier::REVERSED);
         let normal_style = Style::default().bg(Color::Blue);
@@ -86,9 +97,8 @@ impl DisplayView for OpenedRepoView {
                 let count = self.repo_commits.table_items.len();
 
                 if count == 0 {
-                    return
-                }
-                else if i >= count - 1 {
+                    return;
+                } else if i >= count - 1 {
                     0
                 } else {
                     i + 1
@@ -105,9 +115,8 @@ impl DisplayView for OpenedRepoView {
                 let count = self.repo_commits.table_items.len();
 
                 if count == 0 {
-                    return
-                }
-                else if i == 0 {
+                    return;
+                } else if i == 0 {
                     count - 1
                 } else {
                     i - 1
@@ -118,3 +127,4 @@ impl DisplayView for OpenedRepoView {
         self.repo_commits.table_state.select(Some(i));
     }
 }
+
