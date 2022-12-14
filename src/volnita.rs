@@ -3,7 +3,7 @@ use git2::Repository;
 use crate::{traits::display_view::DisplayView, views::opened_repo_view::OpenedRepoView};
 
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
+    event::{DisableMouseCapture, EnableMouseCapture},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -13,8 +13,6 @@ use tui::{
     Terminal,
 };
 
-use crate::input_mode::InputMode;
-
 pub fn start() -> Result<(), Box<dyn Error>> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -23,9 +21,7 @@ pub fn start() -> Result<(), Box<dyn Error>> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let mut view = OpenedRepoView::new();
-    view.repo_commits.table_items = lib_git_run(&mut terminal);
-    let res = run_app(&mut terminal, view);
+    let res = run_app(&mut terminal);
 
     disable_raw_mode()?;
     execute!(
@@ -42,45 +38,12 @@ pub fn start() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn run_app<B: Backend, D: DisplayView>(terminal: &mut Terminal<B>, mut view: D) -> io::Result<()> {
+fn run_app<B: Backend>(terminal: &mut Terminal<B>) -> io::Result<()> {
+    let mut view = OpenedRepoView::new();
+    view.repo_commits.table_items = lib_git_run(terminal);
+
     loop {
         terminal.draw(|f| view.display_view(f))?;
-
-        if let Event::Key(key) = event::read()? {
-            match key.code {
-                KeyCode::Char('q') => return Ok(()),
-                KeyCode::Down => view.arrow_down(),
-                KeyCode::Up => view.arrow_up(),
-                _ => {}
-            }
-
-            let app_input_mode = view.get_input_mode();
-
-            match app_input_mode {
-                InputMode::Normal => match key.code {
-                    KeyCode::Char('e') => {
-                        view.set_input_mode(InputMode::Editing);
-                    }
-                    KeyCode::Char('q') => {
-                        return Ok(());
-                    }
-                    _ => {}
-                },
-                InputMode::Editing => match key.code {
-                    KeyCode::Enter => {
-                        app.messages.push(app.input.value().into());
-                        app.input.reset();
-                    }
-                    KeyCode::Esc => {
-                        app.input_mode = InputMode::Normal;
-                    }
-                    _ => {
-                        input_backend::to_input_request(Event::Key(key))
-                            .and_then(|req| app.input.handle(req));
-                    }
-                },
-            }
-        }
     }
 }
 
@@ -128,11 +91,11 @@ fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>) -> Vec<Vec<String>> {
 
     let cfg = repo.config().unwrap();
     let mut entries = cfg.entries(None).unwrap();
-    while let Some(entry) = entries.next() {
+    /* while let Some(entry) = entries.next() {
         //let entry = entry.unwrap();
         //println!("{} => {}", entry.name().unwrap(), entry.value().unwrap());
     }
-
+ */
     println!("Input name of branch");
 
     let mut branch_name = String::new();
