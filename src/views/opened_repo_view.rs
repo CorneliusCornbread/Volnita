@@ -1,18 +1,12 @@
-use std::io;
-
 use crate::{
-    commit_table::CommitTable,
-    input_mode::InputMode, view_components::input_field::InputField
+    commit_table::CommitTable, view_components::input_field::InputField
 };
 
-use crossterm::event::{KeyCode, Event, self};
 use tui::{
     layout::{Constraint, Layout},
     style::{Color, Modifier, Style},
     widgets::{Block, Borders, Cell, Row, Table, TableState},
 };
-
-use tui_input::{backend::crossterm::EventHandler};
 
 use crate::traits::display_view::DisplayView;
 
@@ -54,54 +48,11 @@ impl<'a> OpenedRepoView {
             input_field: InputField::default(),
         }
     }
-
-    pub fn update(&mut self) -> io::Result<()> {
-        if let Event::Key(key) = event::read()? {
-            match key.code {
-                //KeyCode::Char('q') => return Ok(()), //TODO: need to implement quitting
-                KeyCode::Down => self.arrow_down(),
-                KeyCode::Up => self.arrow_up(),
-                _ => {}
-            }
-
-            let app_input_mode = &self.input_field.input_mode;
-
-            match app_input_mode {
-                InputMode::Normal => match key.code {
-                    KeyCode::Char('e') => {
-                        self.input_field.input_mode = InputMode::Editing;
-                    }
-                    KeyCode::Char('q') => {
-                        return Ok(());
-                    }
-                    _ => {}
-                },
-                InputMode::Editing => match key.code {
-                    KeyCode::Enter => {
-                        self.input_field.enter_message();
-                    }
-                    KeyCode::Esc => {
-                        self.input_field.input_mode = InputMode::Normal;
-                    }
-                    _ => {
-                        self.input_field.input.handle_event(&Event::Key(key));
-                    }
-                },
-            }
-        }
-
-        Ok(())
-    }
 }
 
 impl DisplayView for OpenedRepoView {
     fn display_view<B: tui::backend::Backend>(&mut self, f: &mut tui::Frame<B>) {
-        let result = self.update();
-
-        match result {
-            Ok(_) => {},
-            Err(e) => println!("Error updating repo view {}", e),
-        }
+        self.input_field.check_input();
 
         let rects = Layout::default()
             .constraints([Constraint::Percentage(100)].as_ref())

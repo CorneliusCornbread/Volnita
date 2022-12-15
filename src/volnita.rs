@@ -1,6 +1,6 @@
 use git2::Repository;
 
-use crate::{traits::display_view::DisplayView, views::opened_repo_view::OpenedRepoView};
+use crate::{traits::display_view::DisplayView, views::opened_repo_view::OpenedRepoView, view_components::input_field::{self, InputField}};
 
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
@@ -10,7 +10,7 @@ use crossterm::{
 use std::{error::Error, io};
 use tui::{
     backend::{Backend, CrosstermBackend},
-    Terminal,
+    Terminal, widgets::{Block, Borders},
 };
 
 pub fn start() -> Result<(), Box<dyn Error>> {
@@ -48,11 +48,19 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>) -> io::Result<()> {
 }
 
 fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>) -> Vec<Vec<String>> {
-    println!("Input path to repo"); //TODO: Do this through TUI
+    terminal.draw(|f| {
+        let size = f.size();
+        let block = Block::default()
+            .title("Input your repository")
+            .borders(Borders::NONE);
+        f.render_widget(block, size);
+    });
 
     let mut path = String::new();
 
-    //io::stdin().read_line(&mut path).expect("failed to readline"); //Can't do this, this breaks with TUI
+    let input_field = InputField::default();
+    //TODO: setup some form of input that runs until the user hits enter
+    
 
     let len = path.trim_end_matches(&['\r', '\n'][..]).len();
     path.truncate(len);
