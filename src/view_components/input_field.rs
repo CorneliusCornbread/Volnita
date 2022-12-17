@@ -1,7 +1,7 @@
 use crossterm::event::{KeyCode, Event, self};
 use tui_input::{Input, backend::crossterm::EventHandler};
 
-use crate::{input_mode::InputMode};
+use crate::input_mode::InputMode;
 
 pub struct InputField {
     pub input: Input,

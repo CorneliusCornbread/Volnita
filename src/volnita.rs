@@ -1,6 +1,6 @@
 use git2::Repository;
 
-use crate::{traits::display_view::DisplayView, views::opened_repo_view::OpenedRepoView, view_components::input_field::{self, InputField}};
+use crate::{traits::display_view::DisplayView, views::opened_repo_view::OpenedRepoView, view_components::input_field::InputField};
 
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
