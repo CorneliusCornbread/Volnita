@@ -48,18 +48,10 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>) -> io::Result<()> {
 }
 
 fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>) -> Vec<Vec<String>> {
-    terminal.draw(|f| {
-        let size = f.size();
-        let block = Block::default()
-            .title("Input your repository")
-            .borders(Borders::NONE);
-        f.render_widget(block, size);
-    });
-
     let mut path = String::new();
 
-    let input_field = InputField::default();
-    //TODO: setup some form of input that runs until the user hits enter
+    let mut input_field = InputField::default();
+    let repo_path = input_field.input_prompt(terminal, "Input your git repository: ").unwrap_or("");
     
 
     let len = path.trim_end_matches(&['\r', '\n'][..]).len();

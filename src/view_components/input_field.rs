@@ -1,4 +1,7 @@
+use std::borrow::Borrow;
+
 use crossterm::event::{KeyCode, Event, self};
+use tui::{widgets::{Block, Borders}, Terminal, backend::Backend};
 use tui_input::{Input, backend::crossterm::EventHandler};
 
 use crate::input_mode::InputMode;
@@ -6,7 +9,7 @@ use crate::input_mode::InputMode;
 pub struct InputField {
     pub input: Input,
     pub input_mode: InputMode,
-    pub messages: Vec<String>
+    pub messages: Vec<String> //TODO: change this back to &str vec
 }
 
 impl InputField {
@@ -35,7 +38,7 @@ impl InputField {
                 InputMode::Editing => match key.code {
                     KeyCode::Enter => {
                         self.enter_message();
-                        
+                        return Some(KeyCode::Enter);
                     }
                     KeyCode::Esc => {
                         self.input_mode = InputMode::Normal;
@@ -47,7 +50,27 @@ impl InputField {
             }
         }
 
-        Some(KeyCode::Null)
+        None
+    }
+
+    pub fn input_prompt<B: Backend>(&mut self, terminal: &mut Terminal<B>, msg: &str) -> std::io::Result<&str> {
+        self.input_mode = InputMode::Editing;
+
+        loop {
+            terminal.draw(|f| {
+                let size = f.size();
+                let block = Block::default()
+                    .title(msg)
+                    .borders(Borders::NONE);
+                f.render_widget(block, size);
+            })?;
+            
+            if let Some(char) = self.check_input() {
+                if char == KeyCode::Enter {
+                    return Ok(self.messages.last().unwrap()); 
+                }
+            }
+        }
     }
 
     pub fn enter_message(&mut self) {
