@@ -10,7 +10,7 @@ use crossterm::{
 use std::{error::Error, io};
 use tui::{
     backend::{Backend, CrosstermBackend},
-    Terminal, widgets::{Block, Borders},
+    Terminal,
 };
 
 pub fn start() -> Result<(), Box<dyn Error>> {
@@ -48,15 +48,16 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>) -> io::Result<()> {
 }
 
 fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>) -> Vec<Vec<String>> {
-    let mut path = String::new();
-
     let mut input_field = InputField::default();
-    let repo_path = input_field.input_prompt(terminal, "Input your git repository: ").unwrap_or("");
-    
+    let repo_path = input_field.input_prompt(terminal, "Input your git repository: ").unwrap();
+
+    let mut path = repo_path.to_owned();
 
     let len = path.trim_end_matches(&['\r', '\n'][..]).len();
     path.truncate(len);
     drop(len);
+
+    path = path.replace('\\', "/");
 
     let repo = match Repository::open(path) {
         Ok(repo) => repo,
@@ -64,45 +65,31 @@ fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>) -> Vec<Vec<String>> {
     };
 
     let head = repo.head().unwrap();
-    let name = head.name().unwrap();
-    println!("{}", name);
+    //let name = head.name().unwrap();
 
     let commit = head.peel_to_commit().unwrap();
-    println!("{}", commit.message().unwrap());
-    println!("parents: {}", commit.parent_count());
 
     let mut commit_history = Vec::new();
 
-    for i in 1..=commit.parent_count() {
-        let cur_commit = commit.parent(i).unwrap();
-
+    for commit in commit.parents() {
         let commit_item = vec![
-            cur_commit.message().unwrap().to_owned(),
-            cur_commit.id().to_string(),
-            cur_commit.author().name().unwrap().to_owned(),
+            commit.message().unwrap().to_owned(),
+            commit.id().to_string(),
+            commit.author().name().unwrap().to_owned(),
         ];
 
         commit_history.push(commit_item);
     }
 
-    for commit_item in commit.parents() {
-        println!("{}", commit_item.message().unwrap());
-    }
-
-    let cfg = repo.config().unwrap();
+    /*let cfg = repo.config().unwrap();
     let mut entries = cfg.entries(None).unwrap();
-    /* while let Some(entry) = entries.next() {
+    while let Some(entry) = entries.next() {
         //let entry = entry.unwrap();
         //println!("{} => {}", entry.name().unwrap(), entry.value().unwrap());
     }
  */
-    println!("Input name of branch");
 
-    let mut branch_name = String::new();
-    io::stdin()
-        .read_line(&mut branch_name)
-        .expect("failed to readline");
-
+    /*let mut branch_name = input_field.input_prompt(terminal, "Input name of branch").unwrap().to_owned();    
     let len = branch_name.trim_end_matches(&['\r', '\n'][..]).len();
     branch_name.truncate(len);
     drop(len);
@@ -111,7 +98,7 @@ fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>) -> Vec<Vec<String>> {
     remote.connect(git2::Direction::Fetch).unwrap();
 
     println!("{}", remote.default_branch().unwrap().as_str().unwrap());
-    println!("{}", remote.name().unwrap());
+    println!("{}", remote.name().unwrap());*/
 
     commit_history
 }

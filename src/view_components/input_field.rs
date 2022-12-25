@@ -1,5 +1,3 @@
-use std::borrow::Borrow;
-
 use crossterm::event::{KeyCode, Event, self};
 use tui::{widgets::{Block, Borders}, Terminal, backend::Backend};
 use tui_input::{Input, backend::crossterm::EventHandler};
@@ -60,7 +58,7 @@ impl InputField {
             terminal.draw(|f| {
                 let size = f.size();
                 let block = Block::default()
-                    .title(msg)
+                    .title(msg.to_owned() + "\n" + self.input.value())
                     .borders(Borders::NONE);
                 f.render_widget(block, size);
             })?;
