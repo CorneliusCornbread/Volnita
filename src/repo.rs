@@ -1,4 +1,4 @@
-pub struct SavedRepo {
-    path: String,
-    repo_username: String
+pub struct SavedRepo<'a> {
+    path: &'a str,
+    repo_username: &'a str
 }

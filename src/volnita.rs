@@ -41,9 +41,35 @@ pub fn start() -> Result<(), Box<dyn Error>> {
 fn run_app<B: Backend>(terminal: &mut Terminal<B>) -> io::Result<()> {
     let mut view = OpenedRepoView::new();
     view.repo_commits.table_items = lib_git_run(terminal);
+    
+    /*let mut row1 = Vec::<String>::new();
+    row1.push("val 1".to_owned());
+    row1.push("val 2".to_owned());
+    row1.push("val 3".to_owned());
+    let mut row2 = Vec::<String>::new();
+    row2.push("val 1".to_owned());
+    row2.push("val 2".to_owned());
+    row2.push("val 3".to_owned());
+    let mut row3 = Vec::<String>::new();
+    row3.push("val 1".to_owned());
+    row3.push("val 2".to_owned());
+    row3.push("val 3".to_owned());
+    
+    view.repo_commits.table_items = vec![
+        row1,
+        row2,
+        row3
+    ];
+    */
 
     loop {
-        terminal.draw(|f| view.display_view(f))?;
+        let mut run = false;
+
+        terminal.draw(|f| run = view.display_view(f))?;
+
+        if run == false {
+            return Ok(());
+        }
     }
 }
 
@@ -71,6 +97,7 @@ fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>) -> Vec<Vec<String>> {
 
     let mut commit_history = Vec::new();
 
+    //TODO: not all commit messages show up
     for commit in commit.parents() {
         let commit_item = vec![
             commit.message().unwrap().to_owned(),
