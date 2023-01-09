@@ -32,14 +32,11 @@ impl InputField {
                 f.render_widget(block, size);
             })?;
             
-            match self.check_input() {
-                Some(char) => {
-                    if char == KeyCode::Enter {
-                        self.messages.push(self.input.value().to_owned());
-                        return Ok(self.messages.last().unwrap()); 
-                    }
-                },
-                None => {},
+            if let Some(char) = self.check_input() {
+                if char == KeyCode::Enter {
+                    self.messages.push(self.input.value().to_owned());
+                    return Ok(self.messages.last().unwrap());
+                }
             }
         }
     }

@@ -39,7 +39,7 @@ pub fn start() -> Result<(), Box<dyn Error>> {
 }
 
 fn run_app<B: Backend>(terminal: &mut Terminal<B>) -> io::Result<()> {
-    let mut view = OpenedRepoView::new();
+    let mut view = OpenedRepoView::default();
     view.repo_commits.table_items = lib_git_run(terminal);
     
     /*let mut row1 = Vec::<String>::new();
@@ -67,7 +67,7 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>) -> io::Result<()> {
 
         terminal.draw(|f| run = view.display_view(f))?;
 
-        if run == false {
+        if !run {
             return Ok(());
         }
     }
@@ -81,7 +81,6 @@ fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>) -> Vec<Vec<String>> {
 
     let len = path.trim_end_matches(&['\r', '\n'][..]).len();
     path.truncate(len);
-    drop(len);
 
     path = path.replace('\\', "/");
 
