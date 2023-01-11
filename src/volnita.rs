@@ -93,18 +93,24 @@ fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>) -> Vec<Vec<String>> {
     //let name = head.name().unwrap();
 
     let commit = head.peel_to_commit().unwrap();
-
     let mut commit_history = Vec::new();
+    let mut parent = commit.parents().next();
 
-    //TODO: not all commit messages show up
-    for commit in commit.parents() {
-        let commit_item = vec![
-            commit.message().unwrap().to_owned(),
-            commit.id().to_string(),
-            commit.author().name().unwrap().to_owned(),
-        ];
+    for _ in 0..100 {
+        match parent {
+            Some(p_commit) => {
+                let commit_item = vec![
+                    p_commit.message().unwrap().to_owned(),
+                    p_commit.author().name().unwrap().to_owned(),
+                    p_commit.id().to_string(),
+                ];
 
-        commit_history.push(commit_item);
+                commit_history.push(commit_item);
+                
+                parent = p_commit.parents().next();
+            },
+            None => break,
+        }
     }
 
     /*let cfg = repo.config().unwrap();

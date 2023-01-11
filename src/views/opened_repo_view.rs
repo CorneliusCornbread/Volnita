@@ -52,7 +52,7 @@ impl DisplayView for OpenedRepoView {
 
         let selected_style = Style::default().add_modifier(Modifier::REVERSED);
         let normal_style = Style::default().bg(Color::Blue);
-        let header_cells = ["Header1", "Header2", "Header3"]
+        let header_cells = ["Commit Message", "Author", "ID"]
             .iter()
             .map(|h| Cell::from(*h).style(Style::default().fg(Color::Red)));
         let header = Row::new(header_cells)
@@ -75,9 +75,9 @@ impl DisplayView for OpenedRepoView {
             .highlight_style(selected_style)
             .highlight_symbol(">> ")
             .widths(&[
-                Constraint::Percentage(50),
-                Constraint::Length(30),
-                Constraint::Min(10),
+                Constraint::Percentage(40),
+                Constraint::Percentage(20),
+                Constraint::Percentage(40),
             ]);
 
         f.render_stateful_widget(t, rects[0], &mut self.repo_commits.table_state);
