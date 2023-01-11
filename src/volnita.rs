@@ -96,6 +96,14 @@ fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>) -> Vec<Vec<String>> {
     let mut commit_history = Vec::new();
     let mut parent = commit.parents().next();
 
+    let commit_item = vec![
+        commit.message().unwrap().to_owned(),
+        commit.author().name().unwrap().to_owned(),
+        commit.id().to_string(),
+    ];
+
+    commit_history.push(commit_item);
+
     for _ in 0..100 {
         match parent {
             Some(p_commit) => {
