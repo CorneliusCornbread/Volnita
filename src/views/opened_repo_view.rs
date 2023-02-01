@@ -1,6 +1,4 @@
-use crate::{
-    commit_table::CommitTable, view_components::input_field::InputField
-};
+use crate::{commit_table::CommitTable, view_components::input_field::InputField};
 
 use crossterm::event::KeyCode;
 use tui::{
@@ -34,17 +32,15 @@ impl Default for OpenedRepoView {
 impl DisplayView for OpenedRepoView {
     fn display_view<B: tui::backend::Backend>(&mut self, f: &mut tui::Frame<B>) -> bool {
         if let Some(code) = self.input_field.check_input() {
-            if  code == KeyCode::Down {
+            if code == KeyCode::Down {
                 self.arrow_down();
-            } 
-            else if code == KeyCode::Up {
+            } else if code == KeyCode::Up {
                 self.arrow_up();
-            }
-            else if code == KeyCode::Char('q') {
+            } else if code == KeyCode::Char('q') {
                 return false;
             }
         }
-        
+
         let rects = Layout::default()
             .constraints([Constraint::Percentage(100)].as_ref())
             .margin(1)
@@ -121,4 +117,3 @@ impl DisplayView for OpenedRepoView {
         self.repo_commits.table_state.select(Some(i));
     }
 }
-

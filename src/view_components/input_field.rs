@@ -1,13 +1,17 @@
-use crossterm::event::{KeyCode, Event, self};
-use tui::{widgets::{Block, Borders}, Terminal, backend::Backend};
-use tui_input::{Input, backend::crossterm::EventHandler};
+use crossterm::event::{self, Event, KeyCode};
+use tui::{
+    backend::Backend,
+    widgets::{Block, Borders},
+    Terminal,
+};
+use tui_input::{backend::crossterm::EventHandler, Input};
 
 use crate::input_mode::InputMode;
 
 pub struct InputField {
     pub input: Input,
     pub input_mode: InputMode,
-    pub messages: Vec<String> //TODO: change this back to &str vec
+    pub messages: Vec<String>, //TODO: change this back to &str vec
 }
 
 impl InputField {
@@ -20,7 +24,11 @@ impl InputField {
         None
     }
 
-    pub fn input_prompt<B: Backend>(&mut self, terminal: &mut Terminal<B>, msg: &str) -> std::io::Result<&str> {
+    pub fn input_prompt<B: Backend>(
+        &mut self,
+        terminal: &mut Terminal<B>,
+        msg: &str,
+    ) -> std::io::Result<&str> {
         self.input_mode = InputMode::Editing;
 
         loop {
@@ -31,7 +39,7 @@ impl InputField {
                     .borders(Borders::NONE);
                 f.render_widget(block, size);
             })?;
-            
+
             if let Some(char) = self.check_input() {
                 if char == KeyCode::Enter {
                     self.messages.push(self.input.value().to_owned());
@@ -49,7 +57,10 @@ impl InputField {
 
 impl Default for InputField {
     fn default() -> Self {
-        InputField { input: Input::default(), input_mode: InputMode::Editing, messages: Vec::new() }
-        
+        InputField {
+            input: Input::default(),
+            input_mode: InputMode::Editing,
+            messages: Vec::new(),
+        }
     }
 }

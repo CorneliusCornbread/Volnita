@@ -1,7 +1,7 @@
 pub struct GitCommand {
     options: Vec<String>,
     command: String,
-    value: String
+    value: String,
 }
 
 pub trait CommandBuilder {

@@ -1,6 +1,9 @@
 use git2::Repository;
 
-use crate::{traits::display_view::DisplayView, views::opened_repo_view::OpenedRepoView, view_components::input_field::InputField};
+use crate::{
+    traits::display_view::DisplayView, view_components::input_field::InputField,
+    views::opened_repo_view::OpenedRepoView,
+};
 
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
@@ -41,7 +44,7 @@ pub fn start() -> Result<(), Box<dyn Error>> {
 fn run_app<B: Backend>(terminal: &mut Terminal<B>) -> io::Result<()> {
     let mut view = OpenedRepoView::default();
     view.repo_commits.table_items = lib_git_run(terminal);
-    
+
     /*let mut row1 = Vec::<String>::new();
     row1.push("val 1".to_owned());
     row1.push("val 2".to_owned());
@@ -54,7 +57,7 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>) -> io::Result<()> {
     row3.push("val 1".to_owned());
     row3.push("val 2".to_owned());
     row3.push("val 3".to_owned());
-    
+
     view.repo_commits.table_items = vec![
         row1,
         row2,
@@ -75,7 +78,9 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>) -> io::Result<()> {
 
 fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>) -> Vec<Vec<String>> {
     let mut input_field = InputField::default();
-    let repo_path = input_field.input_prompt(terminal, "Input your git repository: ").unwrap();
+    let repo_path = input_field
+        .input_prompt(terminal, "Input your git repository: ")
+        .unwrap();
 
     let mut path = repo_path.to_owned();
 
@@ -114,22 +119,22 @@ fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>) -> Vec<Vec<String>> {
                 ];
 
                 commit_history.push(commit_item);
-                
+
                 parent = p_commit.parents().next();
-            },
+            }
             None => break,
         }
     }
 
     /*let cfg = repo.config().unwrap();
-    let mut entries = cfg.entries(None).unwrap();
-    while let Some(entry) = entries.next() {
-        //let entry = entry.unwrap();
-        //println!("{} => {}", entry.name().unwrap(), entry.value().unwrap());
-    }
- */
+       let mut entries = cfg.entries(None).unwrap();
+       while let Some(entry) = entries.next() {
+           //let entry = entry.unwrap();
+           //println!("{} => {}", entry.name().unwrap(), entry.value().unwrap());
+       }
+    */
 
-    /*let mut branch_name = input_field.input_prompt(terminal, "Input name of branch").unwrap().to_owned();    
+    /*let mut branch_name = input_field.input_prompt(terminal, "Input name of branch").unwrap().to_owned();
     let len = branch_name.trim_end_matches(&['\r', '\n'][..]).len();
     branch_name.truncate(len);
     drop(len);
