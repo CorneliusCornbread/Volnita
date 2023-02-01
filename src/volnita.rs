@@ -35,7 +35,7 @@ pub fn start() -> Result<(), Box<dyn Error>> {
     terminal.show_cursor()?;
 
     if let Err(err) = res {
-        println!("{:?}", err)
+        println!("{err:?}")
     }
 
     Ok(())
@@ -91,7 +91,7 @@ fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>) -> Vec<Vec<String>> {
 
     let repo = match Repository::open(path) {
         Ok(repo) => repo,
-        Err(e) => panic!("failed to open: {}", e),
+        Err(e) => panic!("failed to open: {e}"),
     };
 
     let head = repo.head().unwrap();
