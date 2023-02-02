@@ -1,15 +1,11 @@
 pub struct GitCommand {
-    options: Vec<String>,
-    command: String,
-    value: String,
+    raw_shell_command: String,
+    command: String,    
+    arguments: Vec<String>,
 }
 
-pub trait CommandBuilder {
-    fn to_git_command() -> String;
-}
-
-impl CommandBuilder for GitCommand {
-    fn to_git_command() -> String {
-        String::from("")
+impl GitCommand {
+    pub fn run_command() {
+        
     }
 }
