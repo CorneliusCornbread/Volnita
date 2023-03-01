@@ -10,7 +10,7 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use std::{error::Error, io};
+use std::{error::Error, io, path, env};
 use tui::{
     backend::{Backend, CrosstermBackend},
     Terminal,
@@ -43,27 +43,8 @@ pub fn start() -> Result<(), Box<dyn Error>> {
 
 fn run_app<B: Backend>(terminal: &mut Terminal<B>) -> io::Result<()> {
     let mut view = OpenedRepoView::default();
-    view.repo_commits.table_items = lib_git_run(terminal);
-
-    /*let mut row1 = Vec::<String>::new();
-    row1.push("val 1".to_owned());
-    row1.push("val 2".to_owned());
-    row1.push("val 3".to_owned());
-    let mut row2 = Vec::<String>::new();
-    row2.push("val 1".to_owned());
-    row2.push("val 2".to_owned());
-    row2.push("val 3".to_owned());
-    let mut row3 = Vec::<String>::new();
-    row3.push("val 1".to_owned());
-    row3.push("val 2".to_owned());
-    row3.push("val 3".to_owned());
-
-    view.repo_commits.table_items = vec![
-        row1,
-        row2,
-        row3
-    ];
-    */
+    let args: Vec<String> = env::args().collect();
+    view.repo_commits.table_items = lib_git_run(terminal, &args);
 
     loop {
         let mut run = false;
@@ -76,8 +57,16 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>) -> io::Result<()> {
     }
 }
 
-fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>) -> Vec<Vec<String>> {
+//TODO: add function that gets the repository from the user that uses a loop and returns a repository
+
+fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>, args: &Vec<String>) -> Vec<Vec<String>> {
     let mut input_field = InputField::default();
+    let repo_path: &str = args.first().unwrap();
+
+    if let Ok(repo) = Repository::open(repo_path) {
+        
+    };
+
     let repo_path = input_field
         .input_prompt(terminal, "Input your git repository: ")
         .unwrap();
