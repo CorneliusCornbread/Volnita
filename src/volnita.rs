@@ -10,6 +10,7 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+use std::io::{ErrorKind};
 use std::{error::Error, io, path, env};
 use tui::{
     backend::{Backend, CrosstermBackend},
@@ -44,7 +45,13 @@ pub fn start() -> Result<(), Box<dyn Error>> {
 fn run_app<B: Backend>(terminal: &mut Terminal<B>) -> io::Result<()> {
     let mut view = OpenedRepoView::default();
     let args: Vec<String> = env::args().collect();
-    view.repo_commits.table_items = lib_git_run(terminal, &args);
+
+    if let Ok(items) = lib_git_run(terminal, &args) {
+        view.repo_commits.table_items = items;
+    }
+    else {
+        return Err(std::io::Error::new(ErrorKind::InvalidInput, "Invalid path"));
+    }
 
     loop {
         let mut run = false;
@@ -59,29 +66,32 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>) -> io::Result<()> {
 
 //TODO: add function that gets the repository from the user that uses a loop and returns a repository
 
-fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>, args: &Vec<String>) -> Vec<Vec<String>> {
-    let mut input_field = InputField::default();
-    let repo_path: &str = args.first().unwrap();
+fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>, args: &Vec<String>) -> Result<Vec<Vec<String>>, ()> {
+    let mut input_field: InputField = InputField::default();
+    let repo_path: &str = args.get(0).unwrap(); //change to ind 1
 
-    if let Ok(repo) = Repository::open(repo_path) {
-        
-    };
+    let repo: Repository;
 
-    let repo_path = input_field
-        .input_prompt(terminal, "Input your git repository: ")
-        .unwrap();
+    if let Ok(arg_repo) = Repository::open(repo_path) {
+        repo = arg_repo;
+    }
+    else {
+        let repo_path = input_field
+            .input_prompt(terminal, "Input your git repository: ")
+            .unwrap();
 
-    let mut path = repo_path.to_owned();
+        let mut path = repo_path.to_owned();
 
-    let len = path.trim_end_matches(&['\r', '\n'][..]).len();
-    path.truncate(len);
+        let len = path.trim_end_matches(&['\r', '\n'][..]).len();
+        path.truncate(len);
 
-    path = path.replace('\\', "/");
+        path = path.replace('\\', "/");
 
-    let repo = match Repository::open(path) {
-        Ok(repo) => repo,
-        Err(e) => panic!("failed to open: {e}"),
-    };
+        repo = match Repository::open(path) {
+            Ok(repo) => repo,
+            Err(e) => return Err(()),
+        };
+    }
 
     let head = repo.head().unwrap();
     //let name = head.name().unwrap();
@@ -134,5 +144,5 @@ fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>, args: &Vec<String>) -> Ve
     println!("{}", remote.default_branch().unwrap().as_str().unwrap());
     println!("{}", remote.name().unwrap());*/
 
-    commit_history
+    Ok(commit_history)
 }

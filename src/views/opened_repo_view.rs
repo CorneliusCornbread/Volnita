@@ -12,6 +12,7 @@ use crate::traits::display_view::DisplayView;
 pub struct OpenedRepoView {
     pub repo_commits: CommitTable,
     pub input_field: InputField,
+    pub force_draw: bool,
 }
 
 impl Default for OpenedRepoView {
@@ -25,22 +26,13 @@ impl Default for OpenedRepoView {
         OpenedRepoView {
             repo_commits: table,
             input_field: InputField::default(),
+            force_draw: true,
         }
     }
 }
 
 impl DisplayView for OpenedRepoView {
     fn display_view<B: tui::backend::Backend>(&mut self, f: &mut tui::Frame<B>) -> bool {
-        if let Some(code) = self.input_field.check_input() {
-            if code == KeyCode::Down {
-                self.arrow_down();
-            } else if code == KeyCode::Up {
-                self.arrow_up();
-            } else if code == KeyCode::Char('q') {
-                return false;
-            }
-        }
-
         let rects = Layout::default()
             .constraints([Constraint::Percentage(100)].as_ref())
             .margin(1)
@@ -78,7 +70,26 @@ impl DisplayView for OpenedRepoView {
 
         f.render_stateful_widget(t, rects[0], &mut self.repo_commits.table_state);
 
-        true
+        // TODO: this should be done in a nicer, more abstracted way.
+        // We need some way of running a draw loop of the application once without
+        // blocking the draws, maybe move input onto a separate thread entirely?
+        // Otherwise we need to figure out some flag within our views.
+        if self.force_draw {
+            self.force_draw = false;
+            return true
+        }
+
+        if let Some(code) = self.input_field.check_input() {
+            if code == KeyCode::Down {
+                self.arrow_down();
+            } else if code == KeyCode::Up {
+                self.arrow_up();
+            } else if code == KeyCode::Char('q') {
+                return false;
+            }
+        }
+
+        return true
     }
 
     fn arrow_down(&mut self) {
