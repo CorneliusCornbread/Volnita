@@ -1,4 +1,4 @@
-use git2::Repository;
+use git2::{Commit, Repository};
 
 use crate::{
     traits::display_view::DisplayView, view_components::input_field::InputField,
@@ -46,7 +46,7 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>) -> io::Result<()> {
     let mut view = OpenedRepoView::default();
     let args: Vec<String> = env::args().collect();
 
-    if let Ok(items) = lib_git_run(terminal, &args) {
+    if let Some(items) = lib_git_run(terminal, &args) {
         view.repo_commits.table_items = items;
     }
     else {
@@ -64,15 +64,19 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>) -> io::Result<()> {
     }
 }
 
+fn open_arg_repo(args: &Vec<String>) -> Option<Repository> {
+    let path = args.get(1)?;
+    let repo = Repository::open(path).ok()?;
+    return Some(repo);
+}
+
 //TODO: add function that gets the repository from the user that uses a loop and returns a repository
 
-fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>, args: &Vec<String>) -> Result<Vec<Vec<String>>, ()> {
+fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>, args: &Vec<String>) -> Option<Vec<Vec<String>>> {
     let mut input_field: InputField = InputField::default();
-    let repo_path: &str = args.get(0).unwrap(); //change to ind 1
-
     let repo: Repository;
 
-    if let Ok(arg_repo) = Repository::open(repo_path) {
+    if let Some(arg_repo) = open_arg_repo(args) {
         repo = arg_repo;
     }
     else {
@@ -87,10 +91,7 @@ fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>, args: &Vec<String>) -> Re
 
         path = path.replace('\\', "/");
 
-        repo = match Repository::open(path) {
-            Ok(repo) => repo,
-            Err(e) => return Err(()),
-        };
+        repo =  Repository::open(path).ok()?;
     }
 
     let head = repo.head().unwrap();
@@ -100,22 +101,14 @@ fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>, args: &Vec<String>) -> Re
     let mut commit_history = Vec::new();
     let mut parent = commit.parents().next();
 
-    let commit_item = vec![
-        commit.message().unwrap().to_owned(),
-        commit.author().name().unwrap().to_owned(),
-        commit.id().to_string(),
-    ];
+    let commit_item = extract_commit_data(&commit)?;
 
     commit_history.push(commit_item);
 
     for _ in 0..100 {
         match parent {
             Some(p_commit) => {
-                let commit_item = vec![
-                    p_commit.message().unwrap().to_owned(),
-                    p_commit.author().name().unwrap().to_owned(),
-                    p_commit.id().to_string(),
-                ];
+                let commit_item = extract_commit_data(&p_commit)?;
 
                 commit_history.push(commit_item);
 
@@ -144,5 +137,14 @@ fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>, args: &Vec<String>) -> Re
     println!("{}", remote.default_branch().unwrap().as_str().unwrap());
     println!("{}", remote.name().unwrap());*/
 
-    Ok(commit_history)
+    Some(commit_history)
+}
+
+fn extract_commit_data(commit: &Commit) -> Option<Vec<String>> {
+    let commit_item = vec![
+        commit.message()?.to_owned(),
+        commit.author().name()?.to_owned(),
+        commit.id().to_string(),
+    ];
+    Some(commit_item)
 }

@@ -33,6 +33,21 @@ impl Default for OpenedRepoView {
 
 impl DisplayView for OpenedRepoView {
     fn display_view<B: tui::backend::Backend>(&mut self, f: &mut tui::Frame<B>) -> bool {
+        if !self.force_draw {
+            if let Some(code) = self.input_field.check_input(){
+                if code == KeyCode::Down {
+                    self.arrow_down();
+                } else if code == KeyCode::Up {
+                    self.arrow_up();
+                } else if code == KeyCode::Char('q') {
+                    return false;
+                }
+            }
+        }
+        else {
+            self.force_draw = false;
+        }
+
         let rects = Layout::default()
             .constraints([Constraint::Percentage(100)].as_ref())
             .margin(1)
@@ -77,16 +92,6 @@ impl DisplayView for OpenedRepoView {
         if self.force_draw {
             self.force_draw = false;
             return true
-        }
-
-        if let Some(code) = self.input_field.check_input() {
-            if code == KeyCode::Down {
-                self.arrow_down();
-            } else if code == KeyCode::Up {
-                self.arrow_up();
-            } else if code == KeyCode::Char('q') {
-                return false;
-            }
         }
 
         return true
