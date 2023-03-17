@@ -1,4 +1,4 @@
-use git2::{Commit, Repository};
+use git2::{Commit, ErrorClass, Repository};
 
 use crate::{
     traits::display_view::DisplayView, view_components::input_field::InputField,
@@ -64,25 +64,37 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>) -> io::Result<()> {
     }
 }
 
-fn open_arg_repo(args: &Vec<String>) -> Option<Repository> {
-    let path = args.get(1)?;
-    let repo = Repository::open(path).ok()?;
-    return Some(repo);
+fn open_arg_repo(args: &Vec<String>) -> Result<Repository, git2::Error> {
+    if let Some(path) = args.get(1) {
+        let repo = Repository::open(path)?;
+        return Ok(repo)
+    }
+    else if let Some(path) = args.get(0) {
+        let repo = Repository::open(path)?;
+        return Ok(repo)
+    }
+    let err = git2::Error::new(
+        git2::ErrorCode::Directory,
+        ErrorClass::None,
+        "No directories were provided."
+    );
+
+    return Err(err)
 }
 
-//TODO: add function that gets the repository from the user that uses a loop and returns a repository
+//TODO: create a open repository view if run dir or arg are not valid
 
 fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>, args: &Vec<String>) -> Option<Vec<Vec<String>>> {
     let mut input_field: InputField = InputField::default();
     let repo: Repository;
 
-    if let Some(arg_repo) = open_arg_repo(args) {
+    if let Ok(arg_repo) = open_arg_repo(args) {
         repo = arg_repo;
     }
     else {
         let repo_path = input_field
             .input_prompt(terminal, "Input your git repository: ")
-            .unwrap();
+            .ok()?;
 
         let mut path = repo_path.to_owned();
 
@@ -94,10 +106,10 @@ fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>, args: &Vec<String>) -> Op
         repo =  Repository::open(path).ok()?;
     }
 
-    let head = repo.head().unwrap();
+    let head = repo.head().ok()?;
     //let name = head.name().unwrap();
 
-    let commit = head.peel_to_commit().unwrap();
+    let commit = head.peel_to_commit().ok()?;
     let mut commit_history = Vec::new();
     let mut parent = commit.parents().next();
 
@@ -105,7 +117,7 @@ fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>, args: &Vec<String>) -> Op
 
     commit_history.push(commit_item);
 
-    for _ in 0..100 {
+    loop {
         match parent {
             Some(p_commit) => {
                 let commit_item = extract_commit_data(&p_commit)?;
