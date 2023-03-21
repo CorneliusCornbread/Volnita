@@ -21,6 +21,9 @@ Cargo.lock
 !.vscode/extensions.json
 !.vscode/*.code-snippets
 
+# Jetbrains products
+.idea/
+
 # Local History for Visual Studio Code
 .history/
 
