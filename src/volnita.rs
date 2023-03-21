@@ -11,7 +11,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use std::io::{ErrorKind};
-use std::{error::Error, io, path, env};
+use std::{error::Error, io, env};
 use tui::{
     backend::{Backend, CrosstermBackend},
     Terminal,
