@@ -34,7 +34,7 @@ impl Default for OpenedRepoView {
 impl DisplayView for OpenedRepoView {
     fn display_view<B: tui::backend::Backend>(&mut self, f: &mut tui::Frame<B>) -> bool {
         if !self.force_draw {
-            if let Some(code) = self.input_field.check_input(){
+            if let Some(code) = self.input_field.check_input() {
                 if code == KeyCode::Down {
                     self.arrow_down();
                 } else if code == KeyCode::Up {
@@ -43,8 +43,7 @@ impl DisplayView for OpenedRepoView {
                     return false;
                 }
             }
-        }
-        else {
+        } else {
             self.force_draw = false;
         }
 
@@ -91,10 +90,10 @@ impl DisplayView for OpenedRepoView {
         // Otherwise we need to figure out some flag within our views.
         if self.force_draw {
             self.force_draw = false;
-            return true
+            return true;
         }
 
-        return true
+        true
     }
 
     fn arrow_down(&mut self) {

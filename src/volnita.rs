@@ -10,8 +10,8 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use std::io::{ErrorKind};
-use std::{error::Error, io, env};
+use std::io::ErrorKind;
+use std::{env, error::Error, io};
 use tui::{
     backend::{Backend, CrosstermBackend},
     Terminal,
@@ -48,8 +48,7 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>) -> io::Result<()> {
 
     if let Some(items) = lib_git_run(terminal, &args) {
         view.repo_commits.table_items = items;
-    }
-    else {
+    } else {
         return Err(std::io::Error::new(ErrorKind::InvalidInput, "Invalid path"));
     }
 
@@ -64,34 +63,35 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>) -> io::Result<()> {
     }
 }
 
-fn open_arg_repo(args: &Vec<String>) -> Result<Repository, git2::Error> {
+fn open_arg_repo(args: &[String]) -> Result<Repository, git2::Error> {
     if let Some(path) = args.get(1) {
         let repo = Repository::open(path)?;
-        return Ok(repo)
-    }
-    else if let Some(path) = args.get(0) {
+        return Ok(repo);
+    } else if let Some(path) = args.get(0) {
         let repo = Repository::open(path)?;
-        return Ok(repo)
+        return Ok(repo);
     }
     let err = git2::Error::new(
         git2::ErrorCode::Directory,
         ErrorClass::None,
-        "No directories were provided."
+        "No directories were provided.",
     );
 
-    return Err(err)
+    Err(err)
 }
 
 //TODO: create a open repository view if run dir or arg are not valid
 
-fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>, args: &Vec<String>) -> Option<Vec<Vec<String>>> {
+fn lib_git_run<B: Backend>(
+    terminal: &mut Terminal<B>,
+    args: &[String],
+) -> Option<Vec<Vec<String>>> {
     let mut input_field: InputField = InputField::default();
     let repo: Repository;
 
     if let Ok(arg_repo) = open_arg_repo(args) {
         repo = arg_repo;
-    }
-    else {
+    } else {
         let repo_path = input_field
             .input_prompt(terminal, "Input your git repository: ")
             .ok()?;
@@ -103,7 +103,7 @@ fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>, args: &Vec<String>) -> Op
 
         path = path.replace('\\', "/");
 
-        repo =  Repository::open(path).ok()?;
+        repo = Repository::open(path).ok()?;
     }
 
     let head = repo.head().ok()?;
@@ -117,17 +117,12 @@ fn lib_git_run<B: Backend>(terminal: &mut Terminal<B>, args: &Vec<String>) -> Op
 
     commit_history.push(commit_item);
 
-    loop {
-        match parent {
-            Some(p_commit) => {
-                let commit_item = extract_commit_data(&p_commit)?;
+    while let Some(p_commit) = parent {
+        let commit_item = extract_commit_data(&p_commit)?;
 
-                commit_history.push(commit_item);
+        commit_history.push(commit_item);
 
-                parent = p_commit.parents().next();
-            }
-            None => break,
-        }
+        parent = p_commit.parents().next();
     }
 
     /*let cfg = repo.config().unwrap();
