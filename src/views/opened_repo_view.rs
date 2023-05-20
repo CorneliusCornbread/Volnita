@@ -1,10 +1,14 @@
-use crate::{commit_table::CommitTable, view_components::input_field::InputField};
+use crate::{
+    command::command_handler::CommandHandler,
+    commit_table::CommitTable,
+    view_components::input_field::{self, InputField},
+};
 
 use crossterm::event::KeyCode;
 use tui::{
     layout::{Constraint, Layout},
     style::{Color, Modifier, Style},
-    widgets::{Block, Borders, Cell, Row, Table, TableState},
+    widgets::{Block, Borders, Cell, Paragraph, Row, Table, TableState},
 };
 
 use crate::traits::display_view::DisplayView;
@@ -13,6 +17,7 @@ pub struct OpenedRepoView {
     pub repo_commits: CommitTable,
     pub input_field: InputField,
     pub force_draw: bool,
+    pub handler: CommandHandler,
 }
 
 impl Default for OpenedRepoView {
@@ -27,6 +32,7 @@ impl Default for OpenedRepoView {
             repo_commits: table,
             input_field: InputField::default(),
             force_draw: true,
+            handler: CommandHandler::default(),
         }
     }
 }
@@ -34,13 +40,24 @@ impl Default for OpenedRepoView {
 impl DisplayView for OpenedRepoView {
     fn display_view<B: tui::backend::Backend>(&mut self, f: &mut tui::Frame<B>) -> bool {
         if !self.force_draw {
-            if let Some(code) = self.input_field.check_input() {
-                if code == KeyCode::Down {
-                    self.arrow_down();
-                } else if code == KeyCode::Up {
-                    self.arrow_up();
-                } else if code == KeyCode::Char('q') {
+            if let Some(key_event) = self.input_field.input_wait() {
+                if input_field::is_quit_event(&key_event) {
                     return false;
+                } else if key_event.code == KeyCode::Down {
+                    self.arrow_down();
+                } else if key_event.code == KeyCode::Up {
+                    self.arrow_up();
+                } else if key_event.code == KeyCode::Enter {
+                    self.input_field.enter_message();
+
+                    let input = self
+                        .input_field
+                        .last_message()
+                        .expect("Expected input after pushing message to message buffer");
+
+                    if let Some(should_continue) = self.handler.call_handler(&input) {
+                        return should_continue;
+                    }
                 }
             }
         } else {
@@ -48,7 +65,7 @@ impl DisplayView for OpenedRepoView {
         }
 
         let rects = Layout::default()
-            .constraints([Constraint::Percentage(100)].as_ref())
+            .constraints([Constraint::Percentage(80), Constraint::Percentage(20)].as_ref())
             .margin(1)
             .split(f.size());
 
@@ -56,7 +73,7 @@ impl DisplayView for OpenedRepoView {
         let normal_style = Style::default().bg(Color::Blue);
         let header_cells = ["Commit Message", "Author", "ID"]
             .iter()
-            .map(|h| Cell::from(*h).style(Style::default().fg(Color::Red)));
+            .map(|h| Cell::from(*h).style(Style::default().fg(Color::White)));
         let header = Row::new(header_cells)
             .style(normal_style)
             .height(1)
@@ -71,7 +88,7 @@ impl DisplayView for OpenedRepoView {
             let cells = item.iter().map(|c| Cell::from(c.to_owned()));
             Row::new(cells).height(height as u16).bottom_margin(1)
         });
-        let t = Table::new(rows)
+        let table = Table::new(rows)
             .header(header)
             .block(Block::default().borders(Borders::ALL).title("Table"))
             .highlight_style(selected_style)
@@ -82,16 +99,24 @@ impl DisplayView for OpenedRepoView {
                 Constraint::Percentage(40),
             ]);
 
-        f.render_stateful_widget(t, rects[0], &mut self.repo_commits.table_state);
+        f.render_stateful_widget(table, rects[0], &mut self.repo_commits.table_state);
 
-        // TODO: this should be done in a nicer, more abstracted way.
-        // We need some way of running a draw loop of the application once without
-        // blocking the draws, maybe move input onto a separate thread entirely?
-        // Otherwise we need to figure out some flag within our views.
-        if self.force_draw {
-            self.force_draw = false;
-            return true;
-        }
+        let input_field_text = Paragraph::new(self.input_field.input.value())
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title("Run Command")
+                    .style(Style::default().fg(Color::LightBlue)),
+            )
+            .style(Style::default().fg(Color::White));
+
+        let input_y = rects[0].height + 2;
+        let input_x = (self.input_field.input.cursor() + 2)
+            .try_into()
+            .unwrap_or(u16::max_value());
+        f.set_cursor(input_x, input_y);
+
+        f.render_widget(input_field_text, rects[1]);
 
         true
     }
