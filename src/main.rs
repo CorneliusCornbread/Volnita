@@ -1,7 +1,7 @@
 pub mod command;
 pub mod commit_table;
+pub mod config;
 pub mod input_mode;
-pub mod repo;
 pub mod traits;
 pub mod view_components;
 pub mod views;

@@ -7,7 +7,7 @@ pub fn handler_create_callbacks() -> CommandHandler {
         handlers: HashMap::default(),
     };
 
-    handler.add_handler("quit", |_h| return false);
+    handler.add_handler("quit", |_h| false);
 
     handler
 }
