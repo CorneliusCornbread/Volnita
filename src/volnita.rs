@@ -5,6 +5,14 @@ use crate::{
     views::opened_repo_view::OpenedRepoView,
 };
 
+#[cfg(windows)]
+use crossterm::{
+    event::{DisableMouseCapture, EnableMouseCapture},
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+};
+
+#[cfg(not(windows))]
 use crossterm::{
     event::{
         DisableMouseCapture, EnableMouseCapture, KeyboardEnhancementFlags,
@@ -23,17 +31,39 @@ use tui::{
 pub fn start() -> Result<(), Box<dyn Error>> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
+
+    configure_terminal(&mut stdout)?;
+
+    let backend = CrosstermBackend::new(stdout);
+    let mut terminal = Terminal::new(backend)?;
+
+    run_app(&mut terminal)?;
+
+    Ok(())
+}
+
+#[cfg(windows)]
+fn configure_terminal(stdout: &mut io::Stdout) -> Result<(), Box<dyn Error>> {
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+
+    Ok(())
+}
+
+#[cfg(not(windows))]
+fn configure_terminal() {
     execute!(
         stdout,
         EnterAlternateScreen,
         EnableMouseCapture,
         PushKeyboardEnhancementFlags(KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES)
     )?;
+}
+
+pub fn reset_terminal() -> Result<(), Box<dyn Error>> {
+    let stdout = io::stdout();
 
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
-
-    let res = run_app(&mut terminal);
 
     disable_raw_mode()?;
     execute!(
@@ -42,10 +72,6 @@ pub fn start() -> Result<(), Box<dyn Error>> {
         DisableMouseCapture
     )?;
     terminal.show_cursor()?;
-
-    if let Err(err) = res {
-        println!("{err:?}")
-    }
 
     Ok(())
 }
