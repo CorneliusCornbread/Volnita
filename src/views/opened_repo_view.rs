@@ -4,7 +4,7 @@ use crate::{
     view_components::input_field::{self, InputField},
 };
 
-use crossterm::event::KeyCode;
+use crossterm::event::{KeyCode, KeyEventKind};
 use tui::{
     layout::{Constraint, Layout},
     style::{Color, Modifier, Style},
@@ -43,20 +43,30 @@ impl DisplayView for OpenedRepoView {
             if let Some(key_event) = self.input_field.input_wait() {
                 if input_field::is_quit_event(&key_event) {
                     return false;
-                } else if key_event.code == KeyCode::Down {
-                    self.arrow_down();
-                } else if key_event.code == KeyCode::Up {
-                    self.arrow_up();
-                } else if key_event.code == KeyCode::Enter {
-                    self.input_field.enter_message();
+                }
 
-                    let input = self
-                        .input_field
-                        .last_message()
-                        .expect("Expected input after pushing message to message buffer");
+                // Technically this is only set on Windows by default as we're not using the flags for
+                // this flag to be set on Windows. Without the flags for Unix OS's it will always
+                // default to 0, aka KeyEventKind::Press.
+                // See: https://docs.rs/crossterm/0.26.1/crossterm/event/struct.KeyEvent.html#structfield.kind
+                if key_event.kind == KeyEventKind::Press {
+                    match key_event.code {
+                        KeyCode::Down => self.arrow_down(),
+                        KeyCode::Up => self.arrow_up(),
+                        KeyCode::Enter => {
+                            self.input_field.enter_message();
 
-                    if let Some(should_continue) = self.handler.call_handler(&input) {
-                        return should_continue;
+                            let input = self
+                                .input_field
+                                .last_message()
+                                .expect("Expected input after pushing message to message buffer");
+
+                            if let Some(should_continue) = self.handler.call_handler(&input) {
+                                return should_continue;
+                            }
+                        }
+
+                        _ => {}
                     }
                 }
             }
