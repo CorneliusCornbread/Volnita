@@ -1,8 +1,8 @@
 use git2::{Commit, ErrorClass, Repository};
 
 use crate::{
-    traits::display_view::DisplayView, view_components::input_field::InputField,
-    views::opened_repo_view::OpenedRepoView,
+    traits::display_view::DisplayView,
+    views::{opened_repo_view::OpenedRepoView, start_view::StartView},
 };
 
 #[cfg(windows)]
@@ -42,23 +42,6 @@ pub fn start() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-#[cfg(windows)]
-fn configure_terminal(stdout: &mut io::Stdout) -> Result<(), Box<dyn Error>> {
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
-
-    Ok(())
-}
-
-#[cfg(not(windows))]
-fn configure_terminal() {
-    execute!(
-        stdout,
-        EnterAlternateScreen,
-        EnableMouseCapture,
-        PushKeyboardEnhancementFlags(KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES)
-    )?;
-}
-
 pub fn reset_terminal() -> Result<(), Box<dyn Error>> {
     let stdout = io::stdout();
 
@@ -76,6 +59,23 @@ pub fn reset_terminal() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+#[cfg(windows)]
+fn configure_terminal(stdout: &mut io::Stdout) -> Result<(), Box<dyn Error>> {
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+
+    Ok(())
+}
+
+#[cfg(not(windows))]
+fn configure_terminal() {
+    execute!(
+        stdout,
+        EnterAlternateScreen,
+        EnableMouseCapture,
+        PushKeyboardEnhancementFlags(KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES)
+    )?;
+}
+
 fn run_app<B: Backend>(terminal: &mut Terminal<B>) -> io::Result<()> {
     let mut view = OpenedRepoView::default();
     let args: Vec<String> = env::args().collect();
@@ -83,7 +83,10 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>) -> io::Result<()> {
     if let Some(items) = lib_git_run(terminal, &args) {
         view.repo_commits.table_items = items;
     } else {
-        return Err(std::io::Error::new(ErrorKind::InvalidInput, "Invalid path"));
+        return Err(std::io::Error::new(
+            ErrorKind::InvalidInput,
+            "Error opening repo select menu",
+        ));
     }
 
     loop {
@@ -120,17 +123,33 @@ fn lib_git_run<B: Backend>(
     terminal: &mut Terminal<B>,
     args: &[String],
 ) -> Option<Vec<Vec<String>>> {
-    let mut input_field: InputField = InputField::default();
     let repo: Repository;
 
     if let Ok(arg_repo) = open_arg_repo(args) {
         repo = arg_repo;
     } else {
-        let repo_path = input_field
-            .input_prompt(terminal, "Input your git repository: ")
-            .ok()?;
+        let selected_repo;
+        {
+            let mut start_view = StartView::default();
 
-        let mut path = repo_path.to_owned();
+            loop {
+                let mut run = true;
+                terminal.draw(|f| run = start_view.display_view(f)).ok()?;
+
+                if !run {
+                    selected_repo = start_view.repo_selected;
+                    break;
+                }
+            }
+        }
+
+        let mut path;
+
+        if let Some(repo_data) = selected_repo {
+            path = repo_data.path;
+        } else {
+            return None;
+        }
 
         let len = path.trim_end_matches(&['\r', '\n'][..]).len();
         path.truncate(len);

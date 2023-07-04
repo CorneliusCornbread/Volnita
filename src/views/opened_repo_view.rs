@@ -1,6 +1,6 @@
 use crate::{
     command::command_handler::CommandHandler,
-    commit_table::CommitTable,
+    data_table::DataTable,
     view_components::input_field::{self, InputField},
 };
 
@@ -14,7 +14,7 @@ use tui::{
 use crate::traits::display_view::DisplayView;
 
 pub struct OpenedRepoView {
-    pub repo_commits: CommitTable,
+    pub repo_commits: DataTable,
     pub input_field: InputField,
     pub force_draw: bool,
     pub handler: CommandHandler,
@@ -22,7 +22,7 @@ pub struct OpenedRepoView {
 
 impl Default for OpenedRepoView {
     fn default() -> OpenedRepoView {
-        let mut table = CommitTable {
+        let mut table = DataTable {
             table_state: TableState::default(),
             table_items: vec![],
         };

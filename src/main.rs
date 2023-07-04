@@ -1,6 +1,7 @@
+pub mod app_flags;
 pub mod command;
-pub mod commit_table;
 pub mod config;
+pub mod data_table;
 pub mod input_mode;
 pub mod traits;
 pub mod view_components;
