@@ -1,7 +1,9 @@
 use git2::{Commit, ErrorClass, Repository};
 
 use crate::{
+    app_flags::AppLoopFlag,
     config::Config,
+    git::GitRepo,
     traits::display_view::DisplayView,
     views::{opened_repo_view::OpenedRepoView, start_view::StartView},
 };
@@ -22,7 +24,12 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use std::{collections::HashMap, io::ErrorKind};
+use std::{
+    collections::HashMap,
+    io::ErrorKind,
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 use std::{env, error::Error, io};
 use tui::{
     backend::{Backend, CrosstermBackend},
@@ -93,23 +100,31 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>) -> io::Result<()> {
     }
 
     loop {
-        let mut run = false;
+        let mut run_flag = AppLoopFlag::default();
 
-        terminal.draw(|f| run = view.display_view(f))?;
+        terminal.draw(|f| run_flag = view.display_view(f))?;
 
-        if !run {
+        if run_flag.should_terminate() {
             return Ok(());
         }
     }
 }
 
-fn open_arg_repo(args: &[String]) -> Result<Repository, git2::Error> {
-    if let Some(path) = args.get(1) {
+fn open_arg_repo(args: &[String]) -> Result<GitRepo, git2::Error> {
+    if let Some(path_str) = args.get(1) {
+        let path = Path::new(path_str);
         let repo = Repository::open(path)?;
-        return Ok(repo);
-    } else if let Some(path) = args.get(0) {
+
+        let git_repo = GitRepo::from_git2_repo(repo);
+
+        return Ok(git_repo);
+    } else if let Some(path_str) = args.get(0) {
+        let path = Path::new(path_str);
         let repo = Repository::open(path)?;
-        return Ok(repo);
+
+        let git_repo = GitRepo::from_git2_repo(repo);
+
+        return Ok(git_repo);
     }
     let err = git2::Error::new(
         git2::ErrorCode::Directory,
@@ -120,13 +135,11 @@ fn open_arg_repo(args: &[String]) -> Result<Repository, git2::Error> {
     Err(err)
 }
 
-//TODO: create a open repository view if run dir or arg are not valid
-
 fn lib_git_run<B: Backend>(
     terminal: &mut Terminal<B>,
     args: &[String],
 ) -> Option<Vec<Vec<String>>> {
-    let repo: Repository;
+    let repo: GitRepo;
 
     if let Ok(arg_repo) = open_arg_repo(args) {
         repo = arg_repo;
@@ -136,33 +149,22 @@ fn lib_git_run<B: Backend>(
             let mut start_view = StartView::default();
 
             loop {
-                let mut run = true;
-                terminal.draw(|f| run = start_view.display_view(f)).ok()?;
+                let mut run_flag = AppLoopFlag::default();
+                terminal
+                    .draw(|f| run_flag = start_view.display_view(f))
+                    .ok()?;
 
-                if !run {
+                if run_flag.should_terminate() {
                     selected_repo = start_view.repo_selected;
                     break;
                 }
             }
         }
 
-        let mut path;
-
-        if let Some(repo_data) = selected_repo {
-            path = repo_data.path;
-        } else {
-            return None;
-        }
-
-        let len = path.trim_end_matches(&['\r', '\n'][..]).len();
-        path.truncate(len);
-
-        path = path.replace('\\', "/");
-
-        repo = Repository::open(path).ok()?;
+        repo = GitRepo::from_serialized_repo(selected_repo?).ok()?;
     }
 
-    let head = repo.head().ok()?;
+    let head = repo.git2_repository.head().ok()?;
     //let name = head.name().unwrap();
 
     let commit = head.peel_to_commit().ok()?;
@@ -183,11 +185,12 @@ fn lib_git_run<B: Backend>(
 
     let mut url = String::new();
 
-    if let Ok(remote) = repo.find_remote("origin") {
+    if let Ok(remote) = repo.git2_repository.find_remote("origin") {
         url = remote.url().unwrap_or_default().to_owned();
     }
 
     let repo_path = repo
+        .git2_repository
         .path()
         .as_os_str()
         .to_str()
@@ -200,8 +203,8 @@ fn lib_git_run<B: Backend>(
 
     let folders: Vec<&str> = repo_path.split('/').collect();
 
-    let recent_repo = crate::config::repo::Repository {
-        path: repo_path.to_owned(),
+    let recent_repo = crate::config::repo::SerializedRepository {
+        path: PathBuf::from_str(&repo_path).unwrap_or_default(),
         name: folders
             .get(folders.len() - 2)
             .unwrap_or(&"UNNAMED")
@@ -242,7 +245,7 @@ fn extract_commit_data(commit: &Commit) -> Option<Vec<String>> {
     Some(commit_item)
 }
 
-fn save_recent_repo(repo: crate::config::repo::Repository) -> Option<()> {
+fn save_recent_repo(repo: crate::config::repo::SerializedRepository) -> Option<()> {
     use crate::config::repo::SavedRepositories;
 
     let mut conf = SavedRepositories::load_or_create_config();

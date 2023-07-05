@@ -2,6 +2,7 @@ pub mod app_flags;
 pub mod command;
 pub mod config;
 pub mod data_table;
+pub mod git;
 pub mod input_mode;
 pub mod traits;
 pub mod view_components;

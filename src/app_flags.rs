@@ -1,9 +1,9 @@
 #[derive(Default)]
-pub struct TerminateFlag {
+pub struct AppLoopFlag {
     terminate_execution: bool,
 }
 
-impl TerminateFlag {
+impl AppLoopFlag {
     pub fn should_continue(&self) -> bool {
         !self.terminate_execution
     }
@@ -15,6 +15,18 @@ impl TerminateFlag {
     pub fn new(terminate: bool) -> Self {
         Self {
             terminate_execution: terminate,
+        }
+    }
+
+    pub fn terminate() -> Self {
+        Self {
+            terminate_execution: true,
+        }
+    }
+
+    pub fn continue_() -> Self {
+        Self {
+            terminate_execution: false,
         }
     }
 }

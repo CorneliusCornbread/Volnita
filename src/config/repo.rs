@@ -1,4 +1,4 @@
-use std::{fs, io};
+use std::{fs, io, path::PathBuf};
 
 use serde::{Deserialize, Serialize};
 
@@ -7,16 +7,16 @@ use super::{get_config_path, Config};
 const FILE_NAME: &str = "saved_repos";
 const FILE_NAME_WITH_EXT: &str = "saved_repos.toml";
 
-#[derive(Serialize, Deserialize)]
-pub struct Repository {
-    pub path: String,
+#[derive(Serialize, Deserialize, Default)]
+pub struct SerializedRepository {
+    pub path: PathBuf,
     pub name: String,
     pub repo_url: String,
 }
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct SavedRepositories {
-    pub recent_repositories: Vec<Repository>,
+    pub recent_repositories: Vec<SerializedRepository>,
 }
 
 impl Config for SavedRepositories {

@@ -1,4 +1,5 @@
 use crate::{
+    app_flags::AppLoopFlag,
     command::command_handler::CommandHandler,
     data_table::DataTable,
     view_components::input_field::{self, InputField},
@@ -18,6 +19,7 @@ pub struct OpenedRepoView {
     pub input_field: InputField,
     pub force_draw: bool,
     pub handler: CommandHandler,
+    pub repo_name: String,
 }
 
 impl Default for OpenedRepoView {
@@ -33,16 +35,17 @@ impl Default for OpenedRepoView {
             input_field: InputField::default(),
             force_draw: true,
             handler: CommandHandler::default(),
+            repo_name: String::default(),
         }
     }
 }
 
 impl DisplayView for OpenedRepoView {
-    fn display_view<B: tui::backend::Backend>(&mut self, f: &mut tui::Frame<B>) -> bool {
+    fn display_view<B: tui::backend::Backend>(&mut self, f: &mut tui::Frame<B>) -> AppLoopFlag {
         if !self.force_draw {
             if let Some(key_event) = self.input_field.input_wait() {
                 if input_field::is_quit_event(&key_event) {
-                    return false;
+                    return AppLoopFlag::terminate();
                 }
 
                 // Technically this is only set on Windows by default as we're not using the flags for
@@ -62,7 +65,7 @@ impl DisplayView for OpenedRepoView {
                                 .expect("Expected input after pushing message to message buffer");
 
                             if let Some(should_continue) = self.handler.call_handler(&input) {
-                                return should_continue;
+                                return AppLoopFlag::new(!should_continue);
                             }
                         }
 
@@ -128,7 +131,7 @@ impl DisplayView for OpenedRepoView {
 
         f.render_widget(input_field_text, rects[1]);
 
-        true
+        AppLoopFlag::continue_()
     }
 
     fn arrow_down(&mut self) {

@@ -1,3 +1,5 @@
+use std::{path::PathBuf, str::FromStr};
+
 use crossterm::event::{KeyCode, KeyEventKind};
 
 use tui::{
@@ -7,9 +9,10 @@ use tui::{
 };
 
 use crate::{
+    app_flags::AppLoopFlag,
     command::command_handler::CommandHandler,
     config::{
-        repo::{Repository, SavedRepositories},
+        repo::{SavedRepositories, SerializedRepository},
         Config,
     },
     data_table::DataTable,
@@ -22,7 +25,7 @@ pub struct StartView {
     pub input_field: InputField,
     force_draw: bool,
     pub handler: CommandHandler,
-    pub repo_selected: Option<Repository>,
+    pub repo_selected: Option<SerializedRepository>,
     arrow_used: bool,
 }
 
@@ -36,7 +39,11 @@ impl StartView {
 
         let mut table_items = Vec::new();
         for repo in config.recent_repositories {
-            table_items.push(vec![repo.name, repo.path, repo.repo_url])
+            table_items.push(vec![
+                repo.name,
+                repo.path.to_string_lossy().to_string(),
+                repo.repo_url,
+            ])
         }
 
         table_items
@@ -63,11 +70,11 @@ impl Default for StartView {
 }
 
 impl DisplayView for StartView {
-    fn display_view<B: tui::backend::Backend>(&mut self, f: &mut tui::Frame<B>) -> bool {
+    fn display_view<B: tui::backend::Backend>(&mut self, f: &mut tui::Frame<B>) -> AppLoopFlag {
         if !self.force_draw {
             if let Some(key_event) = self.input_field.input_wait() {
                 if input_field::is_quit_event(&key_event) {
-                    return false;
+                    return AppLoopFlag::terminate();
                 }
 
                 // Technically this is only set on Windows by default as we're not using the flags for
@@ -85,11 +92,11 @@ impl DisplayView for StartView {
                                 if let Some(selected_repo) =
                                     self.repositories.table_items.get(selected_ind)
                                 {
-                                    let repo = Repository {
-                                        path: selected_repo
-                                            .get(1)
-                                            .unwrap_or(&String::new())
-                                            .to_string(),
+                                    let repo = SerializedRepository {
+                                        path: PathBuf::from_str(
+                                            selected_repo.get(1).unwrap_or(&String::new()),
+                                        )
+                                        .unwrap_or_default(),
                                         name: selected_repo
                                             .get(0)
                                             .unwrap_or(&String::new())
@@ -101,7 +108,7 @@ impl DisplayView for StartView {
                                     };
 
                                     self.repo_selected = Some(repo);
-                                    return false;
+                                    return AppLoopFlag::terminate();
                                 }
                             } else {
                                 self.input_field.enter_message();
@@ -118,8 +125,8 @@ impl DisplayView for StartView {
                                     }
                                     let folders: Vec<&str> = input.split('/').collect();
 
-                                    let recent_repo = crate::config::repo::Repository {
-                                        path: input.to_owned(),
+                                    let recent_repo = crate::config::repo::SerializedRepository {
+                                        path: PathBuf::from_str(&input).unwrap_or_default(),
                                         name: folders
                                             .get(folders.len() - 2)
                                             .unwrap_or(&"UNNAMED")
@@ -129,7 +136,7 @@ impl DisplayView for StartView {
 
                                     self.repo_selected = Some(recent_repo);
 
-                                    return false;
+                                    return AppLoopFlag::terminate();
                                 }
                             }
                         }
@@ -198,7 +205,7 @@ impl DisplayView for StartView {
 
         f.render_widget(input_field_text, rects[1]);
 
-        true
+        AppLoopFlag::continue_()
     }
 
     fn arrow_down(&mut self) {
