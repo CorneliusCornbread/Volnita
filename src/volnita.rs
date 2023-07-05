@@ -1,6 +1,7 @@
 use git2::{Commit, ErrorClass, Repository};
 
 use crate::{
+    config::Config,
     traits::display_view::DisplayView,
     views::{opened_repo_view::OpenedRepoView, start_view::StartView},
 };
@@ -21,7 +22,7 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use std::io::ErrorKind;
+use std::{collections::HashMap, io::ErrorKind};
 use std::{env, error::Error, io};
 use tui::{
     backend::{Backend, CrosstermBackend},
@@ -67,13 +68,15 @@ fn configure_terminal(stdout: &mut io::Stdout) -> Result<(), Box<dyn Error>> {
 }
 
 #[cfg(not(windows))]
-fn configure_terminal() {
+fn configure_terminal(stdout: &mut io::Stdout) -> Result<(), Box<dyn Error>> {
     execute!(
         stdout,
         EnterAlternateScreen,
         EnableMouseCapture,
         PushKeyboardEnhancementFlags(KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES)
     )?;
+
+    Ok(())
 }
 
 fn run_app<B: Backend>(terminal: &mut Terminal<B>) -> io::Result<()> {
@@ -178,6 +181,36 @@ fn lib_git_run<B: Backend>(
         parent = p_commit.parents().next();
     }
 
+    let mut url = String::new();
+
+    if let Ok(remote) = repo.find_remote("origin") {
+        url = remote.url().unwrap_or_default().to_owned();
+    }
+
+    let repo_path = repo
+        .path()
+        .as_os_str()
+        .to_str()
+        .unwrap_or("")
+        .to_owned()
+        .split(".git/")
+        .next()
+        .unwrap_or_default()
+        .to_owned();
+
+    let folders: Vec<&str> = repo_path.split('/').collect();
+
+    let recent_repo = crate::config::repo::Repository {
+        path: repo_path.to_owned(),
+        name: folders
+            .get(folders.len() - 2)
+            .unwrap_or(&"UNNAMED")
+            .to_string(),
+        repo_url: url,
+    };
+
+    save_recent_repo(recent_repo);
+
     /*let cfg = repo.config().unwrap();
        let mut entries = cfg.entries(None).unwrap();
        while let Some(entry) = entries.next() {
@@ -207,4 +240,22 @@ fn extract_commit_data(commit: &Commit) -> Option<Vec<String>> {
         commit.id().to_string(),
     ];
     Some(commit_item)
+}
+
+fn save_recent_repo(repo: crate::config::repo::Repository) -> Option<()> {
+    use crate::config::repo::SavedRepositories;
+
+    let mut conf = SavedRepositories::load_or_create_config();
+    let mut hash = HashMap::new();
+
+    for recent_repo in conf.recent_repositories {
+        hash.insert(recent_repo.path.to_owned(), recent_repo);
+    }
+
+    hash.insert(repo.path.to_owned(), repo);
+
+    conf.recent_repositories = hash.into_values().collect();
+    conf.save_config().ok()?;
+
+    Some(())
 }

@@ -1,5 +1,5 @@
-use crossterm::event::{KeyCode, KeyEventKind, KeyModifiers};
-use git2::string_array::StringArray;
+use crossterm::event::{KeyCode, KeyEventKind};
+
 use tui::{
     layout::{Constraint, Layout},
     style::{Color, Modifier, Style},
@@ -23,6 +23,7 @@ pub struct StartView {
     force_draw: bool,
     pub handler: CommandHandler,
     pub repo_selected: Option<Repository>,
+    arrow_used: bool,
 }
 
 impl StartView {
@@ -33,7 +34,7 @@ impl StartView {
     fn get_table_items() -> Vec<Vec<String>> {
         let config = SavedRepositories::load_or_create_config();
 
-        let mut table_items = vec![vec![]];
+        let mut table_items = Vec::new();
         for repo in config.recent_repositories {
             table_items.push(vec![repo.name, repo.path, repo.repo_url])
         }
@@ -44,7 +45,7 @@ impl StartView {
 
 impl Default for StartView {
     fn default() -> Self {
-        Self {
+        let mut view = Self {
             repositories: DataTable {
                 table_state: TableState::default(),
                 table_items: StartView::get_table_items(),
@@ -53,7 +54,11 @@ impl Default for StartView {
             force_draw: true,
             handler: CommandHandler::default(),
             repo_selected: None,
-        }
+            arrow_used: true,
+        };
+
+        view.repositories.table_state.select(Some(0));
+        view
     }
 }
 
@@ -74,31 +79,64 @@ impl DisplayView for StartView {
                         KeyCode::Down => self.arrow_down(),
                         KeyCode::Up => self.arrow_up(),
                         KeyCode::Enter => {
-                            self.input_field.enter_message();
+                            if self.arrow_used {
+                                let selected_ind =
+                                    self.repositories.table_state.selected().unwrap_or_default();
+                                if let Some(selected_repo) =
+                                    self.repositories.table_items.get(selected_ind)
+                                {
+                                    let repo = Repository {
+                                        path: selected_repo
+                                            .get(1)
+                                            .unwrap_or(&String::new())
+                                            .to_string(),
+                                        name: selected_repo
+                                            .get(0)
+                                            .unwrap_or(&String::new())
+                                            .to_string(),
+                                        repo_url: selected_repo
+                                            .get(2)
+                                            .unwrap_or(&String::new())
+                                            .to_string(),
+                                    };
 
-                            let input = self
-                                .input_field
-                                .last_message()
-                                .expect("Expected input after pushing message to message buffer");
-
-                            if let Ok(git_repo) = git2::Repository::open(&input) {
-                                let mut url = String::new();
-
-                                if let Ok(str_arr) = git_repo.remotes() {
-                                    url = str_arr.get(0).unwrap_or("").to_owned();
+                                    self.repo_selected = Some(repo);
+                                    return false;
                                 }
+                            } else {
+                                self.input_field.enter_message();
 
-                                let repo = Repository {
-                                    path: input,
-                                    name: git_repo.namespace().unwrap_or("UNAMED").to_owned(),
-                                    repo_url: url,
-                                };
+                                let input = self.input_field.last_message().expect(
+                                    "Expected input after pushing message to message buffer",
+                                );
 
-                                self.repo_selected = Some(repo);
+                                if let Ok(git_repo) = git2::Repository::open(&input) {
+                                    let mut url = String::new();
+
+                                    if let Ok(str_arr) = git_repo.remotes() {
+                                        url = str_arr.get(0).unwrap_or("").to_owned();
+                                    }
+                                    let folders: Vec<&str> = input.split('/').collect();
+
+                                    let recent_repo = crate::config::repo::Repository {
+                                        path: input.to_owned(),
+                                        name: folders
+                                            .get(folders.len() - 2)
+                                            .unwrap_or(&"UNNAMED")
+                                            .to_string(),
+                                        repo_url: url,
+                                    };
+
+                                    self.repo_selected = Some(recent_repo);
+
+                                    return false;
+                                }
                             }
                         }
 
-                        _ => {}
+                        _ => {
+                            self.arrow_used = false;
+                        }
                     }
                 }
             }
@@ -107,7 +145,7 @@ impl DisplayView for StartView {
         }
 
         let rects = Layout::default()
-            .constraints([Constraint::Percentage(80), Constraint::Percentage(20)].as_ref())
+            .constraints([Constraint::Max(80), Constraint::Min(4)].as_ref())
             .margin(1)
             .split(f.size());
 
@@ -163,7 +201,41 @@ impl DisplayView for StartView {
         true
     }
 
-    fn arrow_down(&mut self) {}
+    fn arrow_down(&mut self) {
+        let i = match self.repositories.table_state.selected() {
+            Some(i) => {
+                let count = self.repositories.table_items.len();
 
-    fn arrow_up(&mut self) {}
+                if count == 0 {
+                    return;
+                } else if i >= count - 1 {
+                    0
+                } else {
+                    i + 1
+                }
+            }
+            None => 0,
+        };
+        self.repositories.table_state.select(Some(i));
+        self.arrow_used = true;
+    }
+
+    fn arrow_up(&mut self) {
+        let i = match self.repositories.table_state.selected() {
+            Some(i) => {
+                let count = self.repositories.table_items.len();
+
+                if count == 0 {
+                    return;
+                } else if i == 0 {
+                    count - 1
+                } else {
+                    i - 1
+                }
+            }
+            None => 0,
+        };
+        self.repositories.table_state.select(Some(i));
+        self.arrow_used = true;
+    }
 }

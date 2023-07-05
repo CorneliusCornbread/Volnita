@@ -1,13 +1,11 @@
-use std::{
-    fs::File,
-    io::{self, Read},
-};
+use std::{fs, io};
 
 use serde::{Deserialize, Serialize};
 
 use super::{get_config_path, Config};
 
-const FILE_NAME: &str = "saved_repos.toml";
+const FILE_NAME: &str = "saved_repos";
+const FILE_NAME_WITH_EXT: &str = "saved_repos.toml";
 
 #[derive(Serialize, Deserialize)]
 pub struct Repository {
@@ -24,11 +22,9 @@ pub struct SavedRepositories {
 impl Config for SavedRepositories {
     fn load_config() -> Option<SavedRepositories> {
         let mut path = get_config_path()?;
-        path.push(FILE_NAME);
+        path.push(FILE_NAME_WITH_EXT);
 
-        let mut file = File::open(path).ok()?;
-        let mut string = String::new();
-        file.read_to_string(&mut string).ok()?;
+        let string = fs::read_to_string(path).unwrap();
         let data = toml::from_str::<SavedRepositories>(&string).ok()?;
         Some(data)
     }

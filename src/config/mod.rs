@@ -1,7 +1,7 @@
 pub mod repo;
 
 use std::{
-    fs::File,
+    fs::{self, File},
     io::{self, Write},
     path::PathBuf,
 };
@@ -41,6 +41,9 @@ fn save_config_internal(preference_file: &str, value: &impl Serialize) -> Result
             )),
         }
     }?;
+    let mut dir_build = fs::DirBuilder::new();
+    dir_build.recursive(true).create(&dir)?;
+
     dir.push(format!("{preference_file}.toml"));
 
     let data =
