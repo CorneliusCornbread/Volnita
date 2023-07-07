@@ -117,24 +117,9 @@ impl DisplayView for StartView {
                                     "Expected input after pushing message to message buffer",
                                 );
 
-                                if let Ok(git_repo) = git2::Repository::open(&input) {
-                                    let mut url = String::new();
-
-                                    if let Ok(str_arr) = git_repo.remotes() {
-                                        url = str_arr.get(0).unwrap_or("").to_owned();
-                                    }
-                                    let folders: Vec<&str> = input.split('/').collect();
-
-                                    let recent_repo = crate::config::repo::SerializedRepository {
-                                        path: PathBuf::from_str(&input).unwrap_or_default(),
-                                        name: folders
-                                            .get(folders.len() - 2)
-                                            .unwrap_or(&"UNNAMED")
-                                            .to_string(),
-                                        repo_url: url,
-                                    };
-
-                                    self.repo_selected = Some(recent_repo);
+                                if let Ok(git_repo) = git2::Repository::open(input) {
+                                    let recent_repo = crate::git::GitRepo::from_git2_repo(git_repo);
+                                    self.repo_selected = Some(recent_repo.seralized_data);
 
                                     return AppLoopFlag::terminate();
                                 }
@@ -152,7 +137,7 @@ impl DisplayView for StartView {
         }
 
         let rects = Layout::default()
-            .constraints([Constraint::Max(80), Constraint::Min(4)].as_ref())
+            .constraints([Constraint::Max(80), Constraint::Min(3)].as_ref())
             .margin(1)
             .split(f.size());
 
@@ -165,6 +150,7 @@ impl DisplayView for StartView {
             .style(normal_style)
             .height(1)
             .bottom_margin(1);
+
         let rows = self.repositories.table_items.iter().map(|item| {
             let height = item
                 .iter()
@@ -173,16 +159,21 @@ impl DisplayView for StartView {
                 .unwrap_or(0)
                 + 1;
             let cells = item.iter().map(|c| Cell::from(c.to_owned()));
-            Row::new(cells).height(height as u16).bottom_margin(1)
+            Row::new(cells).height(height as u16).bottom_margin(0)
         });
+
         let table = Table::new(rows)
             .header(header)
-            .block(Block::default().borders(Borders::ALL).title("Table"))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title("Open Repository"),
+            )
             .highlight_style(selected_style)
             .highlight_symbol(">> ")
             .widths(&[
-                Constraint::Percentage(40),
                 Constraint::Percentage(20),
+                Constraint::Percentage(40),
                 Constraint::Percentage(40),
             ]);
 

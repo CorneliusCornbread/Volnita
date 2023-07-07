@@ -91,7 +91,8 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>) -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
 
     if let Some(items) = lib_git_run(terminal, &args) {
-        view.repo_commits.table_items = items;
+        view.repo_commits.table_items = items.0;
+        view.repo_name = items.1;
     } else {
         return Err(std::io::Error::new(
             ErrorKind::InvalidInput,
@@ -135,10 +136,11 @@ fn open_arg_repo(args: &[String]) -> Result<GitRepo, git2::Error> {
     Err(err)
 }
 
+// TODO: refactor this, this is awful
 fn lib_git_run<B: Backend>(
     terminal: &mut Terminal<B>,
     args: &[String],
-) -> Option<Vec<Vec<String>>> {
+) -> Option<(Vec<Vec<String>>, String)> {
     let repo: GitRepo;
 
     if let Ok(arg_repo) = open_arg_repo(args) {
@@ -233,7 +235,7 @@ fn lib_git_run<B: Backend>(
     println!("{}", remote.default_branch().unwrap().as_str().unwrap());
     println!("{}", remote.name().unwrap());*/
 
-    Some(commit_history)
+    Some((commit_history, repo.seralized_data.name))
 }
 
 fn extract_commit_data(commit: &Commit) -> Option<Vec<String>> {

@@ -78,12 +78,13 @@ impl DisplayView for OpenedRepoView {
         }
 
         let rects = Layout::default()
-            .constraints([Constraint::Percentage(80), Constraint::Percentage(20)].as_ref())
+            .constraints([Constraint::Percentage(80), Constraint::Min(3)].as_ref())
             .margin(1)
             .split(f.size());
 
         let selected_style = Style::default().add_modifier(Modifier::REVERSED);
         let normal_style = Style::default().bg(Color::Blue);
+
         let header_cells = ["Commit Message", "Author", "ID"]
             .iter()
             .map(|h| Cell::from(*h).style(Style::default().fg(Color::White)));
@@ -91,19 +92,40 @@ impl DisplayView for OpenedRepoView {
             .style(normal_style)
             .height(1)
             .bottom_margin(1);
+
         let rows = self.repo_commits.table_items.iter().map(|item| {
             let height = item
                 .iter()
-                .map(|content| content.chars().filter(|c| *c == '\n').count())
+                .map(|content| {
+                    let mut skip = true;
+                    content
+                        .char_indices()
+                        .rev()
+                        .filter(|c| {
+                            // Skip all newlines at the end of the messages
+                            if skip && c.1 == '\n' {
+                                false
+                            } else {
+                                skip = false;
+                                c.1 == '\n'
+                            }
+                        })
+                        .count()
+                })
                 .max()
                 .unwrap_or(0)
                 + 1;
             let cells = item.iter().map(|c| Cell::from(c.to_owned()));
-            Row::new(cells).height(height as u16).bottom_margin(1)
+            Row::new(cells).height(height as u16).bottom_margin(0)
         });
+
         let table = Table::new(rows)
             .header(header)
-            .block(Block::default().borders(Borders::ALL).title("Table"))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(self.repo_name.to_owned()),
+            )
             .highlight_style(selected_style)
             .highlight_symbol(">> ")
             .widths(&[
